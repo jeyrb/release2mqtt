@@ -133,7 +133,8 @@ class App:
             else:
                 command_topic=None
             if cfg.homeassistant.discovery.enabled:
-                config_topic='%s/update/%s/%s/config' % ( discovery_prefix,node_id,discovery.name )
+                config_topic='%s/update/%s/%s/config' % ( cfg.homeassistant.discovery.prefix,
+                                                          node_id,discovery.name )
                 publisher.publish(config_topic,hass_format_config(discovery,object_id,cfg.node.name,state_topic,command_topic))
             publisher.publish(state_topic,hass_state_config(discovery,cfg.node.name))
             
