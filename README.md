@@ -13,5 +13,9 @@ mqtt:
     password: ${oc.env:MQTT_PASS}
 ```
 
+# HomeAssistant integration
 
+Any updates that have support for automated install will automatically show in the
+Home Assistant settings page:
 
+![Example Home Assistant settings page](docs/images/hass_update_page.png "Home Assistant Updates")
