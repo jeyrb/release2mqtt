@@ -11,6 +11,7 @@ class MqttConfig:
 
 @dataclass
 class DockerConfig:
+    enabled: bool = True
     default: bool = True
     allow_pull: bool = True
     allow_restart: bool = True

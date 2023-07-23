@@ -29,25 +29,29 @@ class App:
     def run(self,cfg):
         publisher=MqttClient(cfg.mqtt)
         publisher.connect()
-        scanner=DockerScanner(cfg.docker)
+        scanners=[]
+        if cfg.docker.enabled:
+            scanners.append(DockerScanner(cfg.docker))
+
         installer=DockerInstaller(publisher,cfg.docker)
         
-        for discovery in scanner.scan():
-            node_id='%s_%s' % (cfg.node.name,discovery.source_type)
-            object_id='%s_%s_%s' % ( discovery.source_type,cfg.node.name,discovery.name)
-            state_topic='%s/update/%s/%s/%s' % ( cfg.homeassistant.discovery.prefix,
-                                                node_id,discovery.name,cfg.homeassistant.state_topic_suffix )
-            if cfg.docker.allow_pull or cfg.docker.allow_restart:
-                command_topic='%s/update/%s/%s/command' % ( cfg.homeassistant.discovery.prefix,
+        for scanner in scanners:
+            for discovery in scanner.scan():
+                node_id='%s_%s' % (cfg.node.name,discovery.source_type)
+                object_id='%s_%s_%s' % ( discovery.source_type,cfg.node.name,discovery.name)
+                state_topic='%s/update/%s/%s/%s' % ( cfg.homeassistant.discovery.prefix,
+                                                    node_id,discovery.name,cfg.homeassistant.state_topic_suffix )
+                if cfg.docker.allow_pull or cfg.docker.allow_restart:
+                    command_topic='%s/update/%s/%s/command' % ( cfg.homeassistant.discovery.prefix,
+                                                                node_id,discovery.name )
+                    installer.connect(command_topic,discovery)
+                else:
+                    command_topic=None
+                if cfg.homeassistant.discovery.enabled:
+                    config_topic='%s/update/%s/%s/config' % ( cfg.homeassistant.discovery.prefix,
                                                             node_id,discovery.name )
-                installer.connect(command_topic,discovery)
-            else:
-                command_topic=None
-            if cfg.homeassistant.discovery.enabled:
-                config_topic='%s/update/%s/%s/config' % ( cfg.homeassistant.discovery.prefix,
-                                                          node_id,discovery.name )
-                publisher.publish(config_topic,hass_format_config(discovery,object_id,cfg.node.name,state_topic,command_topic))
-            publisher.publish(state_topic,hass_state_config(discovery,cfg.node.name))
+                    publisher.publish(config_topic,hass_format_config(discovery,object_id,cfg.node.name,state_topic,command_topic))
+                publisher.publish(state_topic,hass_state_config(discovery,cfg.node.name))
             
         log.info('Initial scan complete') 
         if cfg.docker.allow_pull or cfg.docker.allow_restart:

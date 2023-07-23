@@ -2,6 +2,12 @@
 
 Publish new release version info to MQTT, with support for HomeAssistant auto discovery
 
+## Install
+
+```
+pip install -r requirements.txt
+```
+
 ## Configuration
 
 Create file `config.yaml` in `conf` directory. If the file is not present, a default file will be generated.
