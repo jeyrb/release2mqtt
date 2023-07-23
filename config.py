@@ -14,7 +14,8 @@ class DockerConfig:
     default: bool = True
     allow_pull: bool = True
     allow_restart: bool = True
-    default_icon_url: str = 'https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png'
+    default_entity_picture_url: str = 'https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png'
+    device_icon: str = 'mdi:train-car-container'
     
 @dataclass
 class HomeAssistantDiscoveryConfig:   
