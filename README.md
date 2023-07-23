@@ -1,7 +1,6 @@
-
 # release2mqtt
 
-Publish new release version info to MQTT
+Publish new release version info to MQTT, with support for HomeAssistant auto discovery
 
 ## Configuration
 
