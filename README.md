@@ -19,6 +19,14 @@ mqtt:
     password: ${oc.env:MQTT_PASS}
 ```
 
+Individual docker containers can have customized entity pictures or release notes, using env variables:
+
+```
+    environment:
+      - REL2MQTT_PICTURE=https://frigate.video/images/logo.svg
+      - REL2MQTT_RELNOTES=https://github.com/blakeblackshear/frigate/releases
+```
+
 # HomeAssistant integration
 
 Any updates that have support for automated install will automatically show in the
