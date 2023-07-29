@@ -27,7 +27,11 @@ class MqttClient:
     def on_message(self,client,user_data,msg):
         if msg.topic in self.topic_handlers:
             log.info('MQTT Handling message for %s',msg.topic)
-            self.topic_handlers[msg.topic].handle(user_data,msg)
+            handler=self.topic_handlers[msg.topic]
+            try:
+                handler.handle(user_data,msg)
+            except Exception as e:
+                log.error('MQTT failed handling %s: %s',msg.topic,e)
         else:
             log.warn('MQTT Unhandled message: %s',msg.topic)
         
@@ -40,6 +44,9 @@ class MqttClient:
         log.info('MQTT Starting event loop')
         self.client.loop_forever()
         log.info('MQTT Ended event loop')
+        
+    def loop_once(self):
+        self.client.loop()
         
     def publish(self,topic,payload):
         self.client.publish(topic, payload=json.dumps(payload), qos=0, retain=True)
