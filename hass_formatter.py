@@ -20,4 +20,4 @@ def hass_state_config(discovery,node_name):
         'release_summary'   : discovery.release_summary,
         'entity_picture'    : discovery.entity_picture_url,
         'icon'              : discovery.device_icon
-    }
+    } 

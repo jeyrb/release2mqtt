@@ -24,11 +24,7 @@ class MqttClient:
             # context manager has naive expectations of mqtt pub/sub
             # so to use same client in multiple places manually set it up
             await self.client.__aenter__()
-            #self.client.on_connect = self.on_connect
-            #self.client.on_message = self.on_message
-            #self.client.username_pw_set(username=self.cfg.user,password=self.cfg.password)
-            #self.client.connect(self.cfg.host, int(self.cfg.port), 60)
-            #self.client.loop_start()
+
             log.info("MQTT Connected to broker at %s:%s" % (self.cfg.host, self.cfg.port))
         except Exception as e:
             log.error("MQTT Failed to connect to broker %s:%s - %s", self.cfg.host, self.cfg.port, e)
@@ -118,9 +114,9 @@ class MqttHandler:
             if self.discovery.restarter:
                 log.info('MQTT-Handler Restarting %s ...',self.discovery.name)
                 if self.discovery.restarter.restart(msg.payload):
-                    if self.discovery.rescan:
+                    if self.discovery.rescanner:
                         log.info('MQTT-Handler Rescanning %s ...',self.discovery.name)
-                        self.discovery.rescan()
+                        self.discovery.rescanner.rescan(self.discovery.name)
         except Exception as e:
             log.error('MQTT-Handler Failed to handle %s: %s', msg,e)
 

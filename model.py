@@ -2,7 +2,7 @@
 class Discovery:
     ''' Discovered component from a scan '''
     def __init__(self,source_type,name,entity_picture_url=None,
-                 restarter=None, fetcher=None,rescan=None,
+                 restarter=None, fetcher=None,rescanner=None,
                  current_version=None,latest_version=None,
                  release_url=None,release_summary=None,title_template=None,
                  device_icon=None,custom=None):
@@ -13,7 +13,7 @@ class Discovery:
         self.latest_version=latest_version
         self.restarter=restarter
         self.fetcher=fetcher
-        self.rescan=rescan
+        self.rescanner=rescanner
         self.release_url=release_url
         self.release_summary=release_summary
         self.title_template=title_template

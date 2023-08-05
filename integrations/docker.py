@@ -85,7 +85,7 @@ class DockerScanner:
                                 device_icon=self.cfg.device_icon,
                                 restarter=restarter,
                                 fetcher=fetcher,
-                                rescan=lambda : self.rescan(c.name)
+                                rescanner=self
                             )
         except Exception as e:
             log.error('DOCKER-SCAN ERROR %s: %s',c.name,e)
