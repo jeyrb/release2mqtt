@@ -4,9 +4,12 @@ Publish new release version info to MQTT, with support for HomeAssistant auto di
 
 ## Install
 
+### Manual
 ```
 pip install -r requirements.txt
 ```
+### Docker
+See ``examples`` directory for a working ``docker-compose.yaml`` which presumes that ``release2mqtt`` has been checked out inside a ``build`` subdirectory of the docker-compose directory.
 
 ## Configuration
 
