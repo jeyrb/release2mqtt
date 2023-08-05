@@ -60,7 +60,7 @@ class MqttClient:
                                 session=payload.get('source_session')
                                 if session is None or session != self.session:
                                     log.info('MQTT-CLEAN Removing %s [%s]',msg.topic,session)
-                                    await client.publish(msg.topic.value,NotImplemented,retain=False)
+                                    await client.publish(msg.topic.value,None,retain=False)
                             except Exception as e:
                                 log.warn('MQTT-CLEAN Unable to handle %s: %s',msg.topic,e,exc_info=1)
             
