@@ -6,8 +6,8 @@ import logging as log
 import sys
 from omegaconf import OmegaConf
 from config import Config
-from integrations.docker import DockerInstaller, DockerScanner
-from mqtt import MqttClient, MqttHandler
+from integrations.docker import DockerScanner
+from mqtt import MqttClient
 import aiocron
 
 CONF_FILE='conf/config.yaml'
@@ -28,9 +28,8 @@ class App:
             self.cfg.node.name = os.uname().nodename
             
         log.basicConfig(stream=sys.stdout, level=self.cfg.log.level)
-        self.publisher=MqttClient(self.cfg.mqtt)
-        #self.publisher.connect()
-        self.installer=DockerInstaller(self.cfg.docker)
+        self.publisher=MqttClient(self.cfg.mqtt,self.cfg.node,self.cfg.homeassistant)
+
         self.scanners=[]
         if self.cfg.docker.enabled:
             self.scanners.append(DockerScanner(self.cfg.docker))
@@ -54,51 +53,16 @@ class App:
         await self.publisher.listen()
     
     async def on_discovery(self,discovery):
-        node_id='%s_%s' % (self.cfg.node.name,discovery.source_type)
-        object_id='%s_%s_%s' % ( discovery.source_type,self.cfg.node.name,discovery.name)
-        state_topic='%s/update/%s/%s/%s' % ( self.cfg.homeassistant.discovery.prefix,
-                                            node_id,discovery.name,
-                                            self.cfg.homeassistant.state_topic_suffix )
-        if self.cfg.docker.allow_pull or self.cfg.docker.allow_restart:
-            command_topic='%s/update/%s/%s/command' % ( self.cfg.homeassistant.discovery.prefix,
-                                                        node_id,discovery.name )
-            await self.publisher.subscribe(command_topic,MqttHandler(self.installer,discovery))
-            #self.installer.connect(command_topic,discovery)
+        if discovery.fetcher or discovery.restarter:
+            await self.publisher.subscribe_hass_command(discovery)
+            commandable=True
         else:
-            command_topic=None
+            commandable=False
         if self.cfg.homeassistant.discovery.enabled:
-            config_topic='%s/update/%s/%s/config' % ( self.cfg.homeassistant.discovery.prefix,
-                                                    node_id,discovery.name )
-            await self.publisher.publish(config_topic,hass_format_config(discovery,object_id,
-                                                              self.cfg.node.name,
-                                                              state_topic,command_topic))
-        await self.publisher.publish(state_topic,hass_state_config(discovery,self.cfg.node.name))
-    
+            await self.publisher.publish_hass_config(discovery,
+                                                     commandable=commandable)
 
-        
-def hass_format_config(discovery,object_id,node_name,state_topic,command_topic):
-    return {
-        'name':'%s %s' % (discovery.name,discovery.source_type),
-        'device_class':None, # not firmware, so defaults to null
-        'unique_id':object_id,
-        'state_topic':state_topic,
-        'command_topic':command_topic,
-        'payload_install':'install',
-        'latest_version_topic':state_topic,
-        'latest_version_template':'{{value_json.latest_version}}',
-    }  
-def hass_state_config(discovery,node_name):
-    return {
-        'state'             : 'on' if discovery.latest_version != discovery.current_version else 'off',
-        'installed_version' : discovery.current_version,
-        'latest_version'    : discovery.latest_version,
-        'title'             : discovery.title_template.format(name=discovery.name,node=node_name),
-        'release_url'       : discovery.release_url,
-        'release_summary'   : discovery.release_summary,
-        'entity_picture'    : discovery.entity_picture_url,
-        'icon'              : discovery.device_icon
-    }
- 
+        await self.publisher.publish_hass_state(discovery)
     
 if __name__ == '__main__':
     app=App()
