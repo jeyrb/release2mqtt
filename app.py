@@ -51,6 +51,7 @@ class App:
             async for discovery in scanner.scan():
                 async with asyncio.TaskGroup() as tg:
                     tg.create_task(self.on_discovery(discovery))
+            await self.publisher.clean_topics(scanner.source_type)
                 
         log.info('Scan complete') 
         

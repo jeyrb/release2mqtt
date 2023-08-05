@@ -36,6 +36,7 @@ class DockerScanner:
     def __init__(self, cfg: DockerConfig):
         self.client = docker.from_env()
         self.cfg=cfg
+        self.source_type='docker_image'
         
     def rescan(self,container_name):
         c=self.client.containers.get(container_name)
@@ -61,10 +62,15 @@ class DockerScanner:
             relnotes_url=c_env.get('REL2MQTT_RELNOTES')
             platform='/'.join(filter(None,[c.image.attrs['Os'],c.image.attrs['Architecture'],c.image.attrs.get('Variant')]))
 
+            reg_data=None
             if image_ref and local_version:
-                reg_data = self.client.images.get_registry_data(image_ref)
-            else:
-                reg_data=None
+                retries_left=3
+                while reg_data is None and retries_left > 0:
+                    try:
+                        reg_data = self.client.images.get_registry_data(image_ref)
+                    except Exception as e:
+                        log.warn('DOCKER-SCAN Failed to fetch registry data for %s',c.name)
+                    retries_left-=1
                 
             local_version = local_version or 'Unknown'
             image_ref = image_ref or ''
@@ -78,7 +84,7 @@ class DockerScanner:
             else:
                 fetcher=None
             
-            return Discovery('docker_image',c.name,
+            return Discovery(self.source_type,c.name,
                                 entity_picture_url=picture_url,
                                 release_url=relnotes_url,
                                 current_version=local_version,
