@@ -1,0 +1,11 @@
+version: '3'
+services:
+  release2mqtt:
+    container_name: release2mqtt
+    build: ./build/release2mqtt
+    volumes:
+      - ./conf:/release2mqtt/conf
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+
