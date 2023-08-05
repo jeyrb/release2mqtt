@@ -41,6 +41,8 @@ class DockerScanner:
         c=self.client.containers.get(container_name)
         if c:
             self.analyze(c)
+        else:
+            log.warn('DOCKER-RESCAN Unable to find %s',container_name)
                  
     def analyze(self, c):
         try:

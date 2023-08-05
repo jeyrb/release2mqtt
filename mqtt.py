@@ -117,6 +117,7 @@ class MqttHandler:
                     if self.discovery.rescanner:
                         log.info('MQTT-Handler Rescanning %s ...',self.discovery.name)
                         self.discovery.rescanner.rescan(self.discovery.name)
+                        log.info('MQTT-Handler Rescanned %s ...',self.discovery.name)
         except Exception as e:
             log.error('MQTT-Handler Failed to handle %s: %s', msg,e)
 
