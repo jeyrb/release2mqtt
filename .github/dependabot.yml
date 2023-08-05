@@ -13,5 +13,10 @@ updates:
     python-packages:
       patterns:
         - "*"
+ - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
 
 
