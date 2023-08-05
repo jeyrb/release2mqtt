@@ -16,7 +16,8 @@ def test_publish(mosquitto,capmqtt):
     ]
 
 @pytest.mark.capmqtt_decode_utf8
-def test_handler(mosquitto,capmqtt):
+@pytest.mark.asyncio
+async def test_handler(mosquitto,capmqtt):
     config=MqttConfig()
     uut=MqttClient(config)
     uut.connect()

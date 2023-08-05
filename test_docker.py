@@ -3,8 +3,10 @@ import integrations.docker as mut
 from docker import DockerClient
 from docker.models.containers import Container, ContainerCollection
 from docker.models.images import Image, RegistryData
+import pytest
 
-def test_scanner(mocker):
+@pytest.mark.asyncio
+async def test_scanner(mocker):
     client=mocker.Mock(spec=DockerClient)
     coll=mocker.Mock(spec=ContainerCollection)
     def reg_data_select(v):
@@ -29,7 +31,7 @@ def test_scanner(mocker):
                                                  relnotes='https://release',arch='amd64')]
     mocker.patch("docker.from_env",return_value=client)
     uut=mut.DockerScanner(mut.DockerConfig())
-    results=list(uut.scan())
+    results=[d async for d in uut.scan()]
 
     unchanged=[d for d in results if d.current_version==d.latest_version]
     assert len(unchanged)==1
