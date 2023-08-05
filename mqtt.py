@@ -41,28 +41,32 @@ class MqttClient:
     def on_connect(self, _client, _userdata, _flags, rc):
         log.info("MQTT Connected to broker with result code " + str(rc))
       
-    async def clean_topics(self,source_type):
-        async with asyncio.timeout(60):
-            async with aiomqtt.Client(  hostname=self.cfg.host,
-                                port=self.cfg.port,
-                                username=self.cfg.user,
-                                password=self.cfg.password,
-                                client_id='release2mqtt_clean_%s' % self.node_cfg.name,
-                                keepalive=60,
-                                clean_session=True) as client:
-                async with client.messages() as messages:
-                    options=paho.mqtt.subscribeoptions.SubscribeOptions(noLocal=True)
-                    await client.subscribe('%s_%s/#' % (self.base_topic(),source_type),options=options)
-                    async for msg in messages:
-                        if msg.retain and msg.payload:
-                            try:
-                                payload=json.loads(msg.payload)
-                                session=payload.get('source_session')
-                                if session is None or session != self.session:
-                                    log.info('MQTT-CLEAN Removing %s [%s]',msg.topic,session)
-                                    await client.publish(msg.topic.value,None,retain=False)
-                            except Exception as e:
-                                log.warn('MQTT-CLEAN Unable to handle %s: %s',msg.topic,e,exc_info=1)
+    async def clean_topics(self,source_type,timeout=20):
+        try:
+            async with asyncio.timeout(timeout):
+                async with aiomqtt.Client(  hostname=self.cfg.host,
+                                    port=self.cfg.port,
+                                    username=self.cfg.user,
+                                    password=self.cfg.password,
+                                    client_id='release2mqtt_clean_%s' % self.node_cfg.name,
+                                    keepalive=60,
+                                    clean_session=True) as client:
+                    async with client.messages() as messages:
+                        options=paho.mqtt.subscribeoptions.SubscribeOptions(noLocal=True)
+                        await client.subscribe('%s_%s/#' % (self.base_topic(),source_type),options=options)
+                        async for msg in messages:
+                            if msg.retain and msg.payload:
+                                try:
+                                    payload=json.loads(msg.payload)
+                                    session=payload.get('source_session')
+                                    if session is None or session != self.session:
+                                        log.info('MQTT-CLEAN Removing %s [%s]',msg.topic,session)
+                                        await client.publish(msg.topic.value,None,retain=False)
+                                except Exception as e:
+                                    log.warn('MQTT-CLEAN Unable to handle %s: %s',msg.topic,e,exc_info=1)
+        except asyncio.TimeoutError:
+            pass
+        log.info('MQTT-Clean Completed clean cycle')
             
     def on_message(self,msg):
         if msg.topic.value in self.topic_handlers:

@@ -14,11 +14,12 @@ CONF_FILE='conf/config.yaml'
 
 ## TODO
 # Set install in progress
-# Clean up dead docker from topic
 # Support d-c build with git pull
 # Support apt
 # Retry on registry fetch fail
 # Fetcher in subproc or thread
+# Clear command message after install
+
 
 class App:
     def __init__(self):

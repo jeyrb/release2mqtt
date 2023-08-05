@@ -69,8 +69,12 @@ class DockerScanner:
                     try:
                         reg_data = self.client.images.get_registry_data(image_ref)
                     except Exception as e:
-                        log.warn('DOCKER-SCAN Failed to fetch registry data for %s',c.name)
-                    retries_left-=1
+                        retries_left-=1
+                        if retries_left==0:
+                            log.warn('DOCKER-SCAN Failed to fetch registry data for %s',c.name)
+                        else:
+                            log.debug('DOCKER-SCAN Failed to fetch registry data for %s',c.name)
+                    
                 
             local_version = local_version or 'Unknown'
             image_ref = image_ref or ''
