@@ -31,7 +31,9 @@ Individual docker containers can have customized entity pictures or release note
 ```
 # Release Support
 
-* Docker  Scan and fetch ( ``docker pull`` ) support. Restart support only for ``docker-compose`` image based containers.
+| Ecosystem | Support     | Comments |
+| --------- | ----------- | -------- |
+| Docker    | Scan. Fetch | Fetch is ``docker pull`` only. Restart support only for ``docker-compose`` image based containers.|
   
   
 # HomeAssistant integration
