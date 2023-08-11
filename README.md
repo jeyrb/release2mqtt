@@ -29,10 +29,19 @@ Individual docker containers can have customized entity pictures or release note
       - REL2MQTT_PICTURE=https://frigate.video/images/logo.svg
       - REL2MQTT_RELNOTES=https://github.com/blakeblackshear/frigate/releases
 ```
+# Release Support
 
+| Ecosystem | Support     | Comments |
+| --------- | ----------- | -------- |
+| Docker    | Scan. Fetch | Fetch is ``docker pull`` only. Restart support only for ``docker-compose`` image based containers.|
+  
+  
 # HomeAssistant integration
 
 Any updates that have support for automated install will automatically show in the
 Home Assistant settings page:
 
 ![Example Home Assistant settings page](docs/images/hass_update_page.png "Home Assistant Updates")
+
+If the package supports automated update, then *Skip* and *Install* buttons will appear on the Home Assistant
+interface, and the package can be remotely fetched and the component restarted.
