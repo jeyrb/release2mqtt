@@ -75,7 +75,7 @@ class DockerScanner:
                         else:
                             log.debug('DOCKER-SCAN Failed to fetch registry data for %s',c.name)
                     
-                
+
             local_version = local_version or 'Unknown'
             image_ref = image_ref or ''
             compose_path=c.labels.get('com.docker.compose.project.working_dir')
@@ -87,7 +87,8 @@ class DockerScanner:
                 fetcher=DockerFetcher(c.name,self.client, image_ref=image_ref,platform=platform)
             else:
                 fetcher=None
-            
+            custom={}
+            custom['platform']=platform
             return Discovery(self.source_type,c.name,
                                 entity_picture_url=picture_url,
                                 release_url=relnotes_url,
@@ -97,7 +98,8 @@ class DockerScanner:
                                 device_icon=self.cfg.device_icon,
                                 restarter=restarter,
                                 fetcher=fetcher,
-                                rescanner=self
+                                rescanner=self,
+                                custom=custom
                             )
         except Exception as e:
             log.error('DOCKER-SCAN ERROR %s: %s',c.name,e)

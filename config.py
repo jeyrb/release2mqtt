@@ -43,3 +43,4 @@ class Config:
     mqtt: MqttConfig = field(default_factory=MqttConfig)
     homeassistant: HomeAssistantConfig = field(default_factory=HomeAssistantConfig)
     docker: DockerConfig = field(default_factory=DockerConfig)
+    scan_interval: int=60*60*3

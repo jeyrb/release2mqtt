@@ -1,5 +1,3 @@
-
-
 import os
 import asyncio
 import logging as log
@@ -8,7 +6,7 @@ from omegaconf import OmegaConf
 from config import Config
 from integrations.docker import DockerScanner
 from mqtt import MqttClient
-import aiocron
+
 
 CONF_FILE='conf/config.yaml'
 
@@ -41,10 +39,7 @@ class App:
         self.scanners=[]
         if self.cfg.docker.enabled:
             self.scanners.append(DockerScanner(self.cfg.docker))
-    
-    @aiocron.crontab('0 */3 * * *')
-    async def periodic_scan(self):
-        self.scan()
+        log.info('REL2MQTT App configured - node:%s, scan_interval: %s', self.cfg.node.name, self.cfg.scan_interval)
         
     async def scan(self):
         log.info('Starting scan')
@@ -57,21 +52,22 @@ class App:
         log.info('Scan complete') 
         
     async def run(self):
-        await self.publisher.start()
-        await self.scan()
-        await self.publisher.listen()
+        self.publisher.start()
+        while True:
+            await self.scan()
+            await asyncio.sleep(self.cfg.scan_interval)
     
     async def on_discovery(self,discovery):
         if discovery.fetcher or discovery.restarter:
-            await self.publisher.subscribe_hass_command(discovery)
+            self.publisher.subscribe_hass_command(discovery)
             commandable=True
         else:
             commandable=False
         if self.cfg.homeassistant.discovery.enabled:
-            await self.publisher.publish_hass_config(discovery,
-                                                     commandable=commandable)
+            self.publisher.publish_hass_config(discovery,
+                                                commandable=commandable)
 
-        await self.publisher.publish_hass_state(discovery)
+        self.publisher.publish_hass_state(discovery)
     
 if __name__ == '__main__':
     app=App()
