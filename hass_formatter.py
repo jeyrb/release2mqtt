@@ -1,5 +1,5 @@
 def hass_format_config(discovery,object_id,node_name,state_topic,command_topic,session):
-    return {
+    config= {
         'name':'%s %s' % (discovery.name,discovery.source_type),
         'device_class':None, # not firmware, so defaults to null
         'unique_id':object_id,
@@ -9,10 +9,12 @@ def hass_format_config(discovery,object_id,node_name,state_topic,command_topic,s
         'source_session':session,
         'latest_version_topic':state_topic,
         'latest_version_template':'{{value_json.latest_version}}',
-    }  
+    } 
+    config.update(discovery.provider.hass_config_format(discovery))
+    return config
     
-def hass_state_config(discovery,node_name,session):
-    return {
+def hass_format_state(discovery,node_name,session):
+    state= {
         'state'             : 'on' if discovery.latest_version != discovery.current_version else 'off',
         'installed_version' : discovery.current_version,
         'latest_version'    : discovery.latest_version,
@@ -23,3 +25,5 @@ def hass_state_config(discovery,node_name,session):
         'icon'              : discovery.device_icon,
         'source_session'    : session
     } 
+    state.update(discovery.provider.hass_state_format(discovery))
+    return state

@@ -18,6 +18,7 @@ CONF_FILE='conf/config.yaml'
 # Retry on registry fetch fail
 # Fetcher in subproc or thread
 # Clear command message after install
+# use git hash as alt to img ref for builds, or daily builds
 
 
 class App:
@@ -61,7 +62,7 @@ class App:
             await asyncio.sleep(self.cfg.scan_interval)
     
     async def on_discovery(self,discovery):
-        if discovery.fetchable or discovery.restartable:
+        if discovery.can_update:
             self.publisher.subscribe_hass_command(discovery)
         if self.cfg.homeassistant.discovery.enabled:
             self.publisher.publish_hass_config(discovery)

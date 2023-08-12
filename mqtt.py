@@ -6,7 +6,7 @@ import logging as log
 import asyncio
 import time
 import json
-from hass_formatter import hass_format_config,hass_state_config
+from hass_formatter import hass_format_config,hass_format_state
 
 class MqttClient:
     def __init__(self,cfg: MqttConfig, node_cfg: NodeConfig, hass_cfg: HomeAssistantConfig):
@@ -104,11 +104,11 @@ class MqttClient:
         
     def publish_hass_state(self,discovery):
         self.publish(self.state_topic(discovery),
-                           hass_state_config(discovery,self.node_cfg.name,discovery.session))
+                           hass_format_state(discovery,self.node_cfg.name,discovery.session))
         
     def publish_hass_config(self,discovery):
         object_id='%s_%s_%s' % ( discovery.source_type,self.node_cfg.name,discovery.name)
-        command_topic = self.topic(discovery,'command') if discovery.fetchable or discovery.restartable else None
+        command_topic = self.topic(discovery,'command') if discovery.can_update else None
         self.publish(self.topic(discovery,'config'),
                      hass_format_config(discovery,object_id,
                                         self.node_cfg.name,
@@ -133,7 +133,7 @@ class MqttHandler:
             provider=self.discovery.provider
             if self.discovery.can_update:
                 log.info('MQTT-Handler Starting %s update ...',self.discovery.name)
-                if provider.update(msg.payload,self.discovery)
+                if provider.update(msg.payload,self.discovery):
                     log.info('MQTT-Handler Rescanning %s ...',self.discovery.name)
                     updated=provider.rescan(self.discovery)
                     if updated is not None:

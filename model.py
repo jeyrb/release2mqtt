@@ -29,3 +29,7 @@ class ReleaseProvider:
         pass
     def scan(self,session):
         pass
+    def hass_config_format(self,discovery):
+        return {}
+    def hass_state_format(self,discovery):
+        return {}
