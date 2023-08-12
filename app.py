@@ -4,8 +4,9 @@ import logging as log
 import sys
 from omegaconf import OmegaConf
 from config import Config
-from integrations.docker import DockerScanner
+from integrations.docker import DockerProvider
 from mqtt import MqttClient
+import uuid
 
 
 CONF_FILE='conf/config.yaml'
@@ -38,16 +39,18 @@ class App:
 
         self.scanners=[]
         if self.cfg.docker.enabled:
-            self.scanners.append(DockerScanner(self.cfg.docker))
+            self.scanners.append(DockerProvider(self.cfg.docker))
         log.info('REL2MQTT App configured - node:%s, scan_interval: %s', self.cfg.node.name, self.cfg.scan_interval)
         
     async def scan(self):
         log.info('Starting scan')
         for scanner in self.scanners:
-            async for discovery in scanner.scan():
+            session=uuid.uuid4().hex
+            log.info('Scanning %s [session %s]',scanner.source_type,session)
+            async for discovery in scanner.scan(session):
                 async with asyncio.TaskGroup() as tg:
                     tg.create_task(self.on_discovery(discovery))
-            await self.publisher.clean_topics(scanner.source_type)
+            await self.publisher.clean_topics(scanner,session)
                 
         log.info('Scan complete') 
         
@@ -58,14 +61,10 @@ class App:
             await asyncio.sleep(self.cfg.scan_interval)
     
     async def on_discovery(self,discovery):
-        if discovery.fetcher or discovery.restarter:
+        if discovery.fetchable or discovery.restartable:
             self.publisher.subscribe_hass_command(discovery)
-            commandable=True
-        else:
-            commandable=False
         if self.cfg.homeassistant.discovery.enabled:
-            self.publisher.publish_hass_config(discovery,
-                                                commandable=commandable)
+            self.publisher.publish_hass_config(discovery)
 
         self.publisher.publish_hass_state(discovery)
     
