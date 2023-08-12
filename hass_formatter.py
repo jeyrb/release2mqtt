@@ -1,12 +1,18 @@
 def hass_format_config(discovery,object_id,node_name,state_topic,command_topic,session):
+    features=[]
+    if discovery.can_update:
+        features.append('INSTALL')
+    if discovery.release_url:
+        features.append('RELEASE_NOTES')
     config= {
         'name':'%s %s' % (discovery.name,discovery.source_type),
         'device_class':None, # not firmware, so defaults to null
         'unique_id':object_id,
         'state_topic':state_topic,
         'command_topic':command_topic,
-        'payload_install':'install',
+        'payload_install':{'source_type':discovery.source_type,'name':discovery.name,'command':'install'},
         'source_session':session,
+        'supported_features':features,
         'latest_version_topic':state_topic,
         'latest_version_template':'{{value_json.latest_version}}',
     } 
@@ -15,7 +21,7 @@ def hass_format_config(discovery,object_id,node_name,state_topic,command_topic,s
     
 def hass_format_state(discovery,node_name,session):
     state= {
-        'state'             : 'on' if discovery.latest_version != discovery.current_version else 'off',
+        'state'             : discovery.status,
         'installed_version' : discovery.current_version,
         'latest_version'    : discovery.latest_version,
         'title'             : discovery.title_template.format(name=discovery.name,node=node_name),

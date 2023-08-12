@@ -4,7 +4,7 @@ class Discovery:
     def __init__(self,provider,name,session,
                  entity_picture_url=None,
                  current_version=None,latest_version=None,
-                 can_update=False,
+                 can_update=False,status='on',
                  release_url=None,release_summary=None,title_template=None,
                  device_icon=None,custom=None):
         self.provider=provider
@@ -19,6 +19,7 @@ class Discovery:
         self.release_summary=release_summary
         self.title_template=title_template
         self.device_icon=device_icon
+        self.status=status
         self.custom=custom or {}
     
 class ReleaseProvider:
@@ -33,3 +34,5 @@ class ReleaseProvider:
         return {}
     def hass_state_format(self,discovery):
         return {}
+    def command(self,payload):
+        pass

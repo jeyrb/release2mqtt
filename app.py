@@ -57,13 +57,13 @@ class App:
         
     async def run(self):
         self.publisher.start()
+        for scanner in self.scanners:
+            self.publisher.subscribe_hass_command(scanner)
         while True:
             await self.scan()
             await asyncio.sleep(self.cfg.scan_interval)
     
     async def on_discovery(self,discovery):
-        if discovery.can_update:
-            self.publisher.subscribe_hass_command(discovery)
         if self.cfg.homeassistant.discovery.enabled:
             self.publisher.publish_hass_config(discovery)
 
