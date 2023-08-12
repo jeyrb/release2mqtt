@@ -5,7 +5,7 @@ import os.path
 import logging as log
 from model import Discovery, ReleaseProvider
 import subprocess
-from integrations.git_utils import git_check_update_available, git_pull, git_timestamp
+from integrations.git_utils import git_check_update_available, git_pull, git_timestamp, git_trust
 
 # TODO: distinguish docker build from docker pull
 
@@ -144,7 +144,9 @@ class DockerProvider(ReleaseProvider):
             custom["apt_pkgs"] = c_env.get("REL2MQTT_APT_PKGS")
             
             if custom["git_repo_path"]:
-                custom["git_local_timestamp"]=git_timestamp(os.path.join(compose_path,custom["git_repo_path"]))
+                full_repo_path=os.path.join(compose_path,custom["git_repo_path"])
+                git_trust(full_repo_path)
+                custom["git_local_timestamp"]=git_timestamp(full_repo_path)
             can_update = (
                 (self.cfg.allow_pull and image_ref)
                 or (self.cfg.allow_restart and compose_path)

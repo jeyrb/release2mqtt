@@ -2,6 +2,12 @@ import logging as log
 import subprocess
 import datetime
 
+def git_trust(repo_path: str):  
+    try:
+        subprocess.run("git config --global --add safe.directory %s" % repo_path,shell=True,cwd=repo_path)
+    except Exception as e:
+        log.warn('GIT Unable to trust repo at %s: %s',repo_path,e)
+   
 
 def git_timestamp(repo_path: str):
     result=None
@@ -13,7 +19,7 @@ def git_timestamp(repo_path: str):
                             capture_output=True)
         return datetime.datetime.fromisoformat(result.stdout.strip())
     except Exception as e:
-        log.warn('GIT Unable to parse timestamp %s: %s',result.stdout if result else '<NO RESULT>',e)
+        log.warn('GIT Unable to parse timestamp at %s - %s: %s',repo_path, result.stdout if result else '<NO RESULT>',e)
     
 
 def git_check_update_available(repo_path:str, timeout: int=120):
