@@ -141,7 +141,7 @@ class DockerProvider(ReleaseProvider):
             custom["compose_path"] = compose_path
             custom["compose_version"] = c.labels.get('com.docker.compose.version')
             custom["git_repo_path"] = c_env.get("REL2MQTT_GIT_REPO_PATH")
-            custom["apt_pkgs"] = c_env.get("REL2MQTT_APT")
+            custom["apt_pkgs"] = c_env.get("REL2MQTT_APT_PKGS")
             
             if custom["git_repo_path"]:
                 custom["git_local_timestamp"]=git_timestamp(os.path.join(compose_path,custom["git_repo_path"]))
