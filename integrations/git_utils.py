@@ -4,6 +4,7 @@ import datetime
 
 
 def git_timestamp(repo_path: str):
+    result=None
     try:
         result=subprocess.run("git log -1 --format=%cI --no-show-signature",
                             cwd=repo_path,
@@ -16,6 +17,7 @@ def git_timestamp(repo_path: str):
     
 
 def git_check_update_available(repo_path:str, timeout: int=120):
+    result=None
     try:
         result = subprocess.run(
             "git status -uno",
