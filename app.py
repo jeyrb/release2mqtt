@@ -1,13 +1,15 @@
 import os
 import asyncio
-import logging as log
+import logging
 import sys
 from omegaconf import OmegaConf
 from config import Config
 from integrations.docker import DockerProvider
 from mqtt import MqttClient
 import uuid
+import structlog
 
+log = structlog.get_logger()
 
 CONF_FILE='conf/config.yaml'
 
@@ -22,7 +24,6 @@ CONF_FILE='conf/config.yaml'
 
 class App:
     def __init__(self):
-        log.basicConfig(stream=sys.stdout, level='INFO')
         base_cfg = OmegaConf.structured(Config)
         if os.path.exists(CONF_FILE):
             self.cfg=OmegaConf.merge(base_cfg,OmegaConf.load(CONF_FILE))
@@ -34,19 +35,20 @@ class App:
         if self.cfg.node.name is None:
             self.cfg.node.name = os.uname().nodename
             
-        log.basicConfig(stream=sys.stdout, level=self.cfg.log.level)
+        structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(self.cfg.log.level)))
+        
         self.publisher=MqttClient(self.cfg.mqtt,self.cfg.node,self.cfg.homeassistant)
 
         self.scanners=[]
         if self.cfg.docker.enabled:
             self.scanners.append(DockerProvider(self.cfg.docker))
-        log.info('REL2MQTT App configured - node:%s, scan_interval: %s', self.cfg.node.name, self.cfg.scan_interval)
+        log.info('App configured', node=self.cfg.node.name, scan_interval=self.cfg.scan_interval)
         
     async def scan(self):
         log.info('Starting scan')
         for scanner in self.scanners:
             session=uuid.uuid4().hex
-            log.info('Scanning %s [session %s]',scanner.source_type,session)
+            log.info('Scanning',source=scanner.source_type,session=session)
             async for discovery in scanner.scan(session):
                 async with asyncio.TaskGroup() as tg:
                     tg.create_task(self.on_discovery(discovery))

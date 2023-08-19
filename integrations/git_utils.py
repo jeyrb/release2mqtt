@@ -1,6 +1,8 @@
-import logging as log
 import subprocess
 import datetime
+import structlog
+
+log = structlog.get_logger()
 
 def git_trust(repo_path: str):  
     try:

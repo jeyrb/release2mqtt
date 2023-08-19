@@ -2,13 +2,14 @@ import docker
 from config import DockerConfig
 from docker.models.containers import Container
 import os.path
-import logging as log
+import structlog
 from model import Discovery, ReleaseProvider
 import subprocess
 from integrations.git_utils import git_check_update_available, git_pull, git_timestamp, git_trust
 
 # TODO: distinguish docker build from docker pull
 
+log = structlog.get_logger()
 
 class DockerProvider(ReleaseProvider):
     def __init__(self, cfg: DockerConfig):
@@ -16,15 +17,20 @@ class DockerProvider(ReleaseProvider):
         self.cfg = cfg
         self.source_type = "docker"
         self.discoveries={}
+        self.log = structlog.get_logger().bind(
+            integration='docker'
+        )
 
     def update(self, discovery:Discovery):
-        log.info("DOCKER-UPDATE Updating %s", discovery.name)
+        log=self.log.bind(container=discovery.name,action='update')
+        log.info("Updating")
         self.fetch(discovery)
         restarted = self.restart(discovery)
-        log.info("DOCKER-UPDATE Updated %s", discovery.name)
+        log.info("Updated")
         return restarted
 
     def fetch(self, discovery:Discovery):
+        log=self.log.bind(container=discovery.name,action='fetch')
         git_repo_path = discovery.custom.get("git_repo_path")
         compose_path = discovery.custom.get("compose_path")
         image_ref = discovery.custom.get("image_ref")
@@ -38,61 +44,62 @@ class DockerProvider(ReleaseProvider):
                 git_pull(full_repo_path)
             self.build(discovery,compose_path)
         elif image_ref:
-            log.info("DOCKER-FETCH Pulling %s for %s", image_ref, platform)
+            log.info("Pulling", image_ref=image_ref, platform=platform)
             image = self.client.images.pull(image_ref, platform=platform)
-            log.info("DOCKER-FETCH %s %s", discovery.name, image.id)
+            log.info("Pulled", image_id=image.id)
 
     def build(self,discovery:Discovery,compose_path:str):
-        log.info("DOCKER-BUILD Building %s", discovery.name)
+        log = self.log.bind(container=discovery.name,action='build')
+        log.info("Building")
         proc = subprocess.run(
                 "docker-compose build", shell=True, cwd=compose_path
                 )
         if proc.returncode == 0:
-            log.info("DOCKER-BUILD Build %s via compose successful", discovery.name)
+            log.info("Build via compose successful")
             return True
         else:
             log.warn(
-                "DOCKER-CMD Build of %s failed: %s",
-                discovery.name,
+                "Build failed: %s",
                 proc.returncode,
             )
 
     def restart(self, discovery:Discovery):
+        log = self.log.bind(container=discovery.name,action='restart')
         compose_path = discovery.custom.get("compose_path")
         if compose_path:
-            log.info("DOCKER-CMD Restarting %s", discovery.name)
+            log.info("Restarting")
             proc = subprocess.run(
                 "docker-compose up --detach", shell=True, cwd=compose_path
             )
             if proc.returncode == 0:
-                log.info("DOCKER-CMD Restart %s via compose successful", discovery.name)
+                log.info("Restart via compose successful")
                 return True
             else:
                 log.warn(
-                    "DOCKER-CMD Restart of %s failed: %s",
-                    discovery.name,
+                    "Restart failed: %s",
                     proc.returncode,
                 )
 
     def rescan(self, discovery:Discovery):
+        log = self.log.bind(container=discovery.name,action='rescan')
         c = self.client.containers.get(discovery.name)
         if c:
             return self.analyze(c, discovery.session)
         else:
-            log.warn("DOCKER-RESCAN Unable to find %s", discovery.name)
+            log.warn("Unable to find container for rescan")
 
     def analyze(self, c: Container, session:str):
+        log = self.log.bind(container=c.name,action='analyze')
         try:
             image_ref = c.image.tags[0]
         except:
-            log.warn("DOCKER-SCAN No tags found for %s", c.name)
+            log.warn("No tags found")
             image_ref = None
         try:
             local_version = c.image.attrs["RepoDigests"][0].split("@")[1][7:19]
         except:
             log.warn(
-                "DOCKER-SCAN Cannot determine local version - no digests found for %s",
-                c.name,
+                "Cannot determine local version - no digests found"
             )
             local_version = None
         try:
@@ -123,13 +130,11 @@ class DockerProvider(ReleaseProvider):
                         retries_left -= 1
                         if retries_left == 0:
                             log.warn(
-                                "DOCKER-SCAN Failed to fetch registry data for %s",
-                                c.name,
+                                "Failed to fetch registry data"
                             )
                         else:
                             log.debug(
-                                "DOCKER-SCAN Failed to fetch registry data for %s",
-                                c.name,
+                                "Failed to fetch registry data, retrying"
                             )
 
             local_version = local_version or "Unknown"
@@ -168,10 +173,10 @@ class DockerProvider(ReleaseProvider):
                 custom=custom,
             )
         except Exception as e:
-            log.error("DOCKER-SCAN ERROR %s: %s", c.name, e)
-            log.debug(c.attrs)
+            log.error("ERROR %s", e, exc_info=1, container_attrs=c.attrs)
 
     async def scan(self, session: str):
+        log = self.log.bind(session=session,action='scan')
         for c in self.client.containers.list():
             result = self.analyze(c, session)
             if result:
@@ -179,30 +184,28 @@ class DockerProvider(ReleaseProvider):
                 yield result
                 
     def command(self,discovery_name,command,on_update_start,on_update_end):
-        log.info("DOCKER-COMMAND Executing %s for %s", command,discovery_name)
+        log = self.log.bind(container=discovery_name,action='command',command=command)
+        log.info("Executing")
         updated=False
         try:
             discovery=self.discoveries.get(discovery_name)
             if not discovery_name:
-                log.warn('DOCKER-COMMAND Unknown entity: %s',discovery_name)
+                log.warn('Unknown entity')
             elif command != 'install':
-                log.warn('DOCKER-COMMAND Unknown command: %s',command)
+                log.warn('Unknown command')
             else:
                 if discovery.can_update:
-                    log.info("DOCKER-COMMAND Starting %s update ...", discovery.name)
+                    log.info("Starting update ...")
                     on_update_start(discovery)
                     if self.update(discovery):
-                        log.info("DOCKER-COMMAND Rescanning %s ...", discovery.name)
+                        log.info("Rescanning ...")
                         updated = self.rescan(discovery)
-                        log.info("DOCKER-COMMAND Rescanned %s: %s", discovery.name, updated)
+                        log.info("Rescanned %s", updated)
                     else:
-                        log.info(
-                                "DOCKER-COMMAND Rescan with no result for %s ",
-                                discovery.name,
-                            )
+                        log.info("Rescan with no result")
                         on_update_end(discovery)
         except Exception as e:
-            log.error("DOCKER-COMMAND Failed to handle %s %s: %s", discovery_name, command, e)
+            log.error("Failed to handle: %s", e, exc_info=1)
             if discovery:
                 on_update_end(discovery)
         return updated

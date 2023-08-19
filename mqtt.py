@@ -7,7 +7,9 @@ import asyncio
 import time
 import json
 from hass_formatter import hass_format_config, hass_format_state
+import structlog
 
+log = structlog.get_logger()
 
 class MqttClient:
     def __init__(
@@ -17,12 +19,16 @@ class MqttClient:
         self.node_cfg = node_cfg
         self.hass_cfg = hass_cfg
         self.providers_by_topic = {}
+        self.log = structlog.get_logger().bind(
+            host=cfg.host,
+            integration='mqtt'
+        )
 
     def start(self):
         try:
             self.event_loop = asyncio.get_event_loop()
             self.client = mqtt.Client(
-                client_id="release2mqtt_%s" % self.node_cfg.name, clean_session=True
+                client_id="betA_release2mqtt_%s" % self.node_cfg.name, clean_session=True
             )
             self.client.username_pw_set(self.cfg.user, password=self.cfg.password)
             self.client.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
@@ -30,11 +36,11 @@ class MqttClient:
             self.client.on_disconnect = self.on_disconnect
             self.client.on_message = self.on_message
             self.client.loop_start()
-            log.info(
+            self.log.info(
                 "MQTT Connected to broker at %s:%s" % (self.cfg.host, self.cfg.port)
             )
         except Exception as e:
-            log.error(
+            self.log.error(
                 "MQTT Failed to connect to broker %s:%s - %s",
                 self.cfg.host,
                 self.cfg.port,
@@ -50,13 +56,14 @@ class MqttClient:
         self.client.disconnect()
 
     def on_connect(self, _client, _userdata, _flags, rc):
-        log.info("MQTT Connected to broker with result code " + str(rc))
+        self.log.info("Connected to broker with result code " + str(rc))
 
     def on_disconnect(self, _client, _userdata, rc):
-        log.info("MQTT Disconnected from broker with result code " + str(rc))
+        self.log.info("Disconnected from broker with result code " + str(rc))
 
     async def clean_topics(self, provider, last_scan_session, timeout=30):
-        log.info("MQTT-Clean Starting clean cycle")
+        log=self.log.bind(action='clean')
+        log.info("Starting clean cycle")
         cleaner = mqtt.Client(
             client_id="release2mqtt_clean_%s" % self.node_cfg.name, clean_session=True
         )
@@ -71,21 +78,21 @@ class MqttClient:
                     session = payload.get("source_session")
                 except Exception as e:
                     log.warn(
-                        "MQTT-CLEAN Unable to handle payload for %s: %s",
+                        "Unable to handle payload for %s: %s",
                         msg.topic,
                         e,
                         exc_info=1,
                     )
                 if session is None or session != last_scan_session:
-                    log.info("MQTT-CLEAN Removing %s [%s]", msg.topic, session)
+                    log.info("Removing %s [%s]", msg.topic, session)
                     cleaner.publish(msg.topic, None, retain=False)
                 else:
                     log.debug(
-                        "MQTT-Clean Retaining topic with current sesssion: %s",
+                        "Retaining topic with current sesssion: %s",
                         msg.topic,
                     )
             else:
-                log.debug("MQTT-Clean Skipping clean of %s", msg.topic)
+                log.debug("Skipping clean of %s", msg.topic)
 
         cleaner.on_message = cleanup
         options = paho.mqtt.subscribeoptions.SubscribeOptions(noLocal=True)
@@ -110,25 +117,26 @@ class MqttClient:
         while time.time() <= loop_end:
             cleaner.loop()
 
-        log.info("MQTT-Clean Completed clean cycle")
+        log.info("Completed clean cycle")
 
     async def execute_command(self,msg):
         try:
-            log.info('MQTT Execution starting for %s',msg.topic)
+            log=self.log.bind(topic=msg.topic)
+            log.info('Execution starting')
             payload = json.loads(msg.payload)
             provider = self.providers_by_topic[msg.topic]
             if provider.source_type != payload['source_type']:
-                log.warn('MQTT Unexpected source type %s on %s',payload['source_type'],msg.topic)
+                log.warn('Unexpected source type %s',payload['source_type'])
             else:
-                log.info('MQTT Passing %s command to %s scanner for %s',payload['command'],provider.source_type,payload['name'])
+                log.info('Passing %s command to %s scanner for %s',payload['command'],provider.source_type,payload['name'])
                 updated=provider.command(payload['name'],payload['command'])
                 if updated:
                     self.publish_hass_state(updated)
                 else:
-                    log.debug('MQTT No change to republish after execution for %s',msg.topic)
-            log.info('MQTT Execution ended for %s',msg.topic)
+                    log.debug('No change to republish after execution')
+            log.info('Execution ended')
         except Exception as e:
-            log.error('MQTT Execution failed for %s: %s',msg.topic, e, exc_info=1)
+            log.error('Execution failed: %s', e, exc_info=1)
         
     def on_message(self, _client, _userdata, msg):
         def update_start(discovery):
@@ -136,10 +144,10 @@ class MqttClient:
         def update_end(discovery):
             self.publish_hass_state(discovery,in_progress=False)
         if msg.topic in self.providers_by_topic:
-            log.info("MQTT Handling message for %s", msg.topic)
+            self.log.info("Handling message for %s", msg.topic)
             asyncio.run_coroutine_threadsafe(self.execute_command(msg), self.event_loop,update_start,update_end)
         else:
-            log.warn("MQTT Unhandled message: %s", msg.topic)
+            self.log.warn("Unhandled message: %s", msg.topic)
 
     def config_topic(self, discovery, sub_topic=None):
         return "%s/update/%s_%s/%s/update/config" % (
@@ -192,9 +200,9 @@ class MqttClient:
     def subscribe_hass_command(self,provider):
         topic=self.command_topic(provider)
         if topic in self.providers_by_topic:
-            log.debug("MQTT Skipping subscription for %s", topic)
+            self.log.debug("Skipping subscription for %s", topic)
         else:
-            log.info("MQTT Handler subscribing to %s", topic)
+            self.log.info("Handler subscribing to %s", topic)
             self.providers_by_topic[topic] = provider
             self.client.subscribe(topic)
 
