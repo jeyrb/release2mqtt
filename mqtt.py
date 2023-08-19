@@ -25,10 +25,11 @@ class MqttClient:
         )
 
     def start(self):
+        log=self.log.bind(action='start')
         try:
             self.event_loop = asyncio.get_event_loop()
             self.client = mqtt.Client(
-                client_id="betA_release2mqtt_%s" % self.node_cfg.name, clean_session=True
+                client_id="release2mqtt_%s" % self.node_cfg.name, clean_session=True
             )
             self.client.username_pw_set(self.cfg.user, password=self.cfg.password)
             self.client.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
@@ -36,18 +37,18 @@ class MqttClient:
             self.client.on_disconnect = self.on_disconnect
             self.client.on_message = self.on_message
             self.client.loop_start()
-            self.log.info(
-                "MQTT Connected to broker at %s:%s" % (self.cfg.host, self.cfg.port)
+            log.info(
+                "Connected to broker at %s:%s" % (self.cfg.host, self.cfg.port)
             )
         except Exception as e:
-            self.log.error(
-                "MQTT Failed to connect to broker %s:%s - %s",
+            log.error(
+                "Failed to connect to broker %s:%s - %s",
                 self.cfg.host,
                 self.cfg.port,
-                e,
+                e, exc_info=1
             )
             raise EnvironmentError(
-                "MQTT Connection Failure to %s:%s as %s -- %s"
+                "Connection Failure to %s:%s as %s -- %s"
                 % (self.cfg.host, self.cfg.port, self.cfg.user, e)
             )
 
@@ -56,10 +57,10 @@ class MqttClient:
         self.client.disconnect()
 
     def on_connect(self, _client, _userdata, _flags, rc):
-        self.log.info("Connected to broker with result code " + str(rc))
+        self.log.info("Connected to broker",result_code=rc)
 
     def on_disconnect(self, _client, _userdata, rc):
-        self.log.info("Disconnected from broker with result code " + str(rc))
+        self.log.info("Disconnected from broker",result_code=rc)
 
     async def clean_topics(self, provider, last_scan_session, timeout=30):
         log=self.log.bind(action='clean')
