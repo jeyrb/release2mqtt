@@ -139,7 +139,7 @@ class MqttClient:
             log.warn("MQTT Unhandled message: %s", msg.topic)
 
     def config_topic(self, discovery, sub_topic=None):
-        return "%s/update/%s_%s/%s" % (
+        return "%s/update/%s_%s/%s/update/config" % (
             self.hass_cfg.discovery.prefix,
             self.node_cfg.name,
             discovery.source_type,

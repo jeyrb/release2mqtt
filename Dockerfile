@@ -6,6 +6,7 @@ COPY requirements.txt /
 
 RUN apt-get -y update
 RUN apt-get -y upgrade
+RUN apt-get -y install git docker-compose
 
 RUN pip install --trusted-host pypi.python.org -v -r /requirements.txt
 
