@@ -21,7 +21,7 @@ def hass_format_config(discovery,object_id,node_name,state_topic,command_topic,s
     config.update(discovery.provider.hass_config_format(discovery))
     return config
     
-def hass_format_state(discovery,node_name,session):
+def hass_format_state(discovery,node_name,session,in_progress=False):
     state= {
         'state'             : discovery.status,
         'installed_version' : discovery.current_version,
@@ -29,7 +29,8 @@ def hass_format_state(discovery,node_name,session):
         'title'             : discovery.title_template.format(name=discovery.name,node=node_name),
         'release_url'       : discovery.release_url,
         'release_summary'   : discovery.release_summary,
-        'source_session'    : session
+        'source_session'    : session,
+        'in_progress'       : in_progress
     } 
     state.update(discovery.provider.hass_state_format(discovery))
     return state

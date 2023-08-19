@@ -131,10 +131,13 @@ class MqttClient:
             log.error('MQTT Execution failed for %s: %s',msg.topic, e, exc_info=1)
         
     def on_message(self, _client, _userdata, msg):
-       
+        def update_start(discovery):
+            self.publish_hass_state(discovery,in_progress=True)
+        def update_end(discovery):
+            self.publish_hass_state(discovery,in_progress=False)
         if msg.topic in self.providers_by_topic:
             log.info("MQTT Handling message for %s", msg.topic)
-            asyncio.run_coroutine_threadsafe(self.execute_command(msg), self.event_loop)
+            asyncio.run_coroutine_threadsafe(self.execute_command(msg), self.event_loop,update_start,update_end)
         else:
             log.warn("MQTT Unhandled message: %s", msg.topic)
 
@@ -161,10 +164,10 @@ class MqttClient:
             provider.source_type
         )
 
-    def publish_hass_state(self, discovery):
+    def publish_hass_state(self, discovery, in_progress=False):
         self.publish(
             self.state_topic(discovery),
-            hass_format_state(discovery, self.node_cfg.name, discovery.session),
+            hass_format_state(discovery, self.node_cfg.name, discovery.session, in_progress=in_progress),
         )
 
     def publish_hass_config(self, discovery):

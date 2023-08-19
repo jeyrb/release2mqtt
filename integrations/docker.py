@@ -20,8 +20,9 @@ class DockerProvider(ReleaseProvider):
     def update(self, discovery:Discovery):
         log.info("DOCKER-UPDATE Updating %s", discovery.name)
         self.fetch(discovery)
-        self.restart(discovery)
+        restarted = self.restart(discovery)
         log.info("DOCKER-UPDATE Updated %s", discovery.name)
+        return restarted
 
     def fetch(self, discovery:Discovery):
         git_repo_path = discovery.custom.get("git_repo_path")
@@ -177,17 +178,9 @@ class DockerProvider(ReleaseProvider):
                 self.discoveries[result.name]=result
                 yield result
                 
-    def hass_config_format(self, discovery: Discovery):
-        return {
-                'git_repo_path':discovery.custom.get('git_repo_path'),
-                'image_ref':discovery.custom.get('image_ref'),
-                'platform':discovery.custom.get('platform'),
-                'compose_path':discovery.custom.get('compose_path'),
-                'compose_version':discovery.custom.get('compose_version')
-        }
-        
-    def command(self,discovery_name,command):
+    def command(self,discovery_name,command,on_update_start,on_update_end):
         log.info("DOCKER-COMMAND Executing %s for %s", command,discovery_name)
+        updated=False
         try:
             discovery=self.discoveries.get(discovery_name)
             if not discovery_name:
@@ -196,17 +189,21 @@ class DockerProvider(ReleaseProvider):
                 log.warn('DOCKER-COMMAND Unknown command: %s',command)
             else:
                 if discovery.can_update:
-                    log.info("MQTT-Handler Starting %s update ...", discovery.name)
+                    log.info("DOCKER-COMMAND Starting %s update ...", discovery.name)
+                    on_update_start(discovery)
                     if self.update(discovery):
-                        log.info("MQTT-Handler Rescanning %s ...", discovery.name)
+                        log.info("DOCKER-COMMAND Rescanning %s ...", discovery.name)
                         updated = self.rescan(discovery)
-                        log.info("MQTT-Handler Rescanned %s: %s", discovery.name, updated)
-                        return updated
+                        log.info("DOCKER-COMMAND Rescanned %s: %s", discovery.name, updated)
                     else:
-                            log.info(
-                                "MQTT-Handler Rescan with no result for %s ",
+                        log.info(
+                                "DOCKER-COMMAND Rescan with no result for %s ",
                                 discovery.name,
                             )
+                        on_update_end(discovery)
         except Exception as e:
-            log.error("MQTT-Handler Failed to handle %s %s: %s", discovery_name, command, e)
+            log.error("DOCKER-COMMAND Failed to handle %s %s: %s", discovery_name, command, e)
+            if discovery:
+                on_update_end(discovery)
+        return updated
     
