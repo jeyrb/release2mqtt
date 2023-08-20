@@ -2,6 +2,7 @@ def hass_format_config(discovery,object_id,node_name,state_topic,command_topic,s
     features=[]
     if discovery.can_update:
         features.append('INSTALL')
+        features.append('PROGRESS')
     if discovery.release_url:
         features.append('RELEASE_NOTES')
     config= {
