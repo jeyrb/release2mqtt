@@ -103,7 +103,8 @@ class DockerProvider(ReleaseProvider):
             )
             local_version = None
         try:
-            c_env = dict(e.split("=") for e in c.attrs["Config"]["Env"])
+            env_str = c.attrs["Config"]["Env"]
+            c_env = dict(env.split("=") for env in env_str if '==' not in env)
             picture_url = c_env.get(
                 "REL2MQTT_PICTURE", self.cfg.default_entity_picture_url
             )
