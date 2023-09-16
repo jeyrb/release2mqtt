@@ -120,7 +120,7 @@ class MqttClient:
 
         log.info("Completed clean cycle")
 
-    async def execute_command(self,msg):
+    async def execute_command(self,msg,on_update_start,on_update_end):
         try:
             log=self.log.bind(topic=msg.topic)
             log.info('Execution starting')
@@ -130,7 +130,7 @@ class MqttClient:
                 log.warn('Unexpected source type %s',payload['source_type'])
             else:
                 log.info('Passing %s command to %s scanner for %s',payload['command'],provider.source_type,payload['name'])
-                updated=provider.command(payload['name'],payload['command'])
+                updated=provider.command(payload['name'],payload['command'],on_update_start,on_update_end)
                 if updated:
                     self.publish_hass_state(updated)
                 else:
@@ -152,12 +152,12 @@ class MqttClient:
             self.publish_hass_state(discovery,in_progress=False)
         if msg.topic in self.providers_by_topic:
             self.log.info("Handling message for %s", msg.topic)
-            asyncio.run_coroutine_threadsafe(self.execute_command(msg), self.event_loop,update_start,update_end)
+            asyncio.run_coroutine_threadsafe(self.execute_command(msg,update_start,update_end), self.event_loop)
         else:
             self.log.warn("Unhandled message: %s", msg.topic)
 
     def config_topic(self, discovery, sub_topic=None):
-        return "%s/update/%s_%s/%s/update/config" % (
+        return "%s/update/%s_%s_%s/update/config" % (
             self.hass_cfg.discovery.prefix,
             self.node_cfg.name,
             discovery.source_type,
