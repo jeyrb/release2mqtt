@@ -148,6 +148,7 @@ class DockerProvider(ReleaseProvider):
             custom["compose_version"] = c.labels.get('com.docker.compose.version')
             custom["git_repo_path"] = c_env.get("REL2MQTT_GIT_REPO_PATH")
             custom["apt_pkgs"] = c_env.get("REL2MQTT_APT_PKGS")
+            update_policy='AutoUpdate' if c_env.get('REL2MQTT_UPDATE')=='AUTO' else 'Passive'
             
             if custom["git_repo_path"]:
                 full_repo_path=os.path.join(compose_path,custom["git_repo_path"])
@@ -165,6 +166,7 @@ class DockerProvider(ReleaseProvider):
                 entity_picture_url=picture_url,
                 release_url=relnotes_url,
                 current_version=local_version,
+                update_policy=update_policy,
                 latest_version=reg_data and reg_data.short_id[7:] or local_version,
                 title_template="Docker image update for {name} on {node}",
                 device_icon=self.cfg.device_icon,

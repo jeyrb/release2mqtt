@@ -138,6 +138,12 @@ class MqttClient:
             log.info('Execution ended')
         except Exception as e:
             log.error('Execution failed: %s', e, exc_info=1)
+            
+    def local_message(self,discovery,command):
+        msg=LocalMessage()
+        msg.topic=self.command_topic(discovery.provider)
+        msg.payload=json.dumps({'source_type':discovery.source_type,'name':discovery.name,'command':command})
+        self.on_message(None,None,msg)
         
     def on_message(self, _client, _userdata, msg):
         def update_start(discovery):
@@ -213,3 +219,6 @@ class MqttClient:
     def publish(self, topic, payload):
         self.client.publish(topic, payload=json.dumps(payload), qos=0, retain=True)
 
+class LocalMessage:
+    topic=None
+    payload=None

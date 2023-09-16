@@ -69,6 +69,8 @@ class App:
             self.publisher.publish_hass_config(discovery)
 
         self.publisher.publish_hass_state(discovery)
+        if discovery.update_policy=='AUTO':
+            self.publisher.local_message(discovery,'INSTALL')
     
 if __name__ == '__main__':
     app=App()

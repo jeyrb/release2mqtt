@@ -5,6 +5,7 @@ class Discovery:
                  entity_picture_url=None,
                  current_version=None,latest_version=None,
                  can_update=False,status='on',
+                 update_policy=None,
                  release_url=None,release_summary=None,title_template=None,
                  device_icon=None,custom=None):
         self.provider=provider
@@ -20,6 +21,7 @@ class Discovery:
         self.title_template=title_template
         self.device_icon=device_icon
         self.status=status
+        self.update_policy=update_policy
         self.custom=custom or {}
     
 class ReleaseProvider:
