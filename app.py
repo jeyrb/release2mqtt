@@ -1,7 +1,6 @@
 import os
 import asyncio
 import logging
-import sys
 from omegaconf import OmegaConf
 from config import Config
 from integrations.docker import DockerProvider
@@ -45,8 +44,8 @@ class App:
         log.info('App configured', node=self.cfg.node.name, scan_interval=self.cfg.scan_interval)
         
     async def scan(self):
-        log.info('Starting scan')
         for scanner in self.scanners:
+            log.info('Starting scan',source_type=scanner.source_type)
             session=uuid.uuid4().hex
             log.info('Scanning',source=scanner.source_type,session=session)
             async for discovery in scanner.scan(session):
@@ -54,7 +53,7 @@ class App:
                     tg.create_task(self.on_discovery(discovery))
             await self.publisher.clean_topics(scanner,session)
                 
-        log.info('Scan complete') 
+            log.info('Scan complete',source_type=scanner.source_type) 
         
     async def run(self):
         self.publisher.start()
@@ -65,12 +64,14 @@ class App:
             await asyncio.sleep(self.cfg.scan_interval)
     
     async def on_discovery(self,discovery):
+        dlog=log.bind(name=discovery.name)
         if self.cfg.homeassistant.discovery.enabled:
             self.publisher.publish_hass_config(discovery)
 
         self.publisher.publish_hass_state(discovery)
-        if discovery.update_policy=='AUTO':
-            self.publisher.local_message(discovery,'INSTALL')
+        if discovery.update_policy=='Auto':
+            dlog.info('Initiate auto update')
+            self.publisher.local_message(discovery,'install')
     
 if __name__ == '__main__':
     app=App()

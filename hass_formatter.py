@@ -16,6 +16,7 @@ def hass_format_config(discovery,object_id,node_name,state_topic,command_topic,s
         'supported_features':features,
         'entity_picture'    : discovery.entity_picture_url,
         'icon'              : discovery.device_icon,
+        'update_policy'     : discovery.update_policy,
         'latest_version_topic':state_topic,
         'latest_version_template':'{{value_json.latest_version}}',
     } 

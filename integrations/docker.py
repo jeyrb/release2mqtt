@@ -96,12 +96,13 @@ class DockerProvider(ReleaseProvider):
             log.warn("No tags found")
             image_ref = None
         try:
-            local_version = c.image.attrs["RepoDigests"][0].split("@")[1][7:19]
-        except:
+            local_version = c.image.attrs["RepoDigests"][-1].split("@")[1][7:19]
+        except Exception as e:
             log.warn(
-                "Cannot determine local version - no digests found"
+                "Cannot determine local version - no digests found",e
             )
             local_version = None
+
         try:
             env_str = c.attrs["Config"]["Env"]
             c_env = dict(env.split("=") for env in env_str if '==' not in env)
@@ -149,7 +150,12 @@ class DockerProvider(ReleaseProvider):
             custom["compose_version"] = c.labels.get('com.docker.compose.version')
             custom["git_repo_path"] = c_env.get("REL2MQTT_GIT_REPO_PATH")
             custom["apt_pkgs"] = c_env.get("REL2MQTT_APT_PKGS")
-            update_policy='AutoUpdate' if c_env.get('REL2MQTT_UPDATE')=='AUTO' else 'Passive'
+            
+            if c_env.get('REL2MQTT_UPDATE')=='AUTO':
+                log.debug('Auto update policy detected')
+                update_policy='Auto' 
+            else:
+                update_policy='Passive'
             
             if custom["git_repo_path"]:
                 full_repo_path=os.path.join(compose_path,custom["git_repo_path"])
