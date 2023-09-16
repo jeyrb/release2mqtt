@@ -99,7 +99,7 @@ class DockerProvider(ReleaseProvider):
             local_version = c.image.attrs["RepoDigests"][-1].split("@")[1][7:19]
         except Exception as e:
             log.warn("Cannot determine local version: %s",e)
-            log.warn("RepoDigests=%s",c.image.attrs.get('RepoDigests')
+            log.warn("RepoDigests=%s",c.image.attrs.get('RepoDigests'))
             local_version = None
 
         try:
