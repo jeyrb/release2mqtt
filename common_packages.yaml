@@ -1,0 +1,36 @@
+common_packages:
+  frigate:
+    docker:
+      image_name: ghcr.io/blakeblackshear/frigate
+    logo_url: https://frigate.video/images/logo.svg
+    release_notes_url: https://github.com/blakeblackshear/frigate/releases
+
+  librenms:
+    docker:
+      image_name: librenms/librenms
+    logo_url: https://www.librenms.org/images/LibreNMS-Logo.svg
+    release_notes_url: https://github.com/librenms/docker/releases
+
+  unifi:
+    docker:
+      image_name: jacobalberty/unifi
+    logo_url: https://pbs.twimg.com/profile_images/1610157462321254402/tMCv8T-y_400x400.png
+    release_notes_url: https://github.com/jacobalberty/unifi-docker/releases
+
+  caddy:
+    docker:
+      image_name: caddy
+    logo_url: https://d1q6f0aelx0por.cloudfront.net/product-logos/library-caddy-logo.png
+    release_notes_url: https://github.com/caddyserver/caddy/releases
+
+  gitea:
+    docker:
+      image_name: gitea/gitea
+    logo_url: https://raw.githubusercontent.com/go-gitea/gitea/47b878858ada27fc4c74eeadcc1e467d2da90e04/assets/logo.svg
+    release_notes_url: https://github.com/go-gitea/gitea/releases
+
+  portainer:
+    docker:
+      image_name: portainer/portainer-ce
+    logo_url: https://raw.githubusercontent.com/portainer/portainer/develop/build/docker-extension/portainer.svg
+    release_notes_url: https://github.com/portainer/portainer/releases

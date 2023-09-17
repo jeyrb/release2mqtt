@@ -9,7 +9,7 @@ import structlog
 log = structlog.get_logger()
 
 CONF_FILE = "conf/config.yaml"
-PKG_INFO_FILE = "conf/common_packages.yaml"
+PKG_INFO_FILE = "common_packages.yaml"
 
 # #TODO
 # Set install in progress
