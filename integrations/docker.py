@@ -91,11 +91,11 @@ class DockerProvider(ReleaseProvider):
         log = self.log.bind(container=discovery.name, action="rescan")
         c = self.client.containers.get(discovery.name)
         if c:
-            return self.analyze(c, discovery.session)
+            return self.analyze(c, discovery.session, original_discovery=discovery)
         else:
             log.warn("Unable to find container for rescan")
 
-    def analyze(self, c: Container, session: str):
+    def analyze(self, c: Container, session: str, original_discovery=None):
         log = self.log.bind(container=c.name, action="analyze")
         try:
             image_ref = c.image.tags[0]
@@ -193,6 +193,9 @@ class DockerProvider(ReleaseProvider):
                 release_url=relnotes_url,
                 current_version=local_version,
                 update_policy=update_policy,
+                update_last_attempt=original_discovery
+                and original_discovery.update_last_attempt
+                or None,
                 latest_version=reg_data and reg_data.short_id[7:] or local_version,
                 title_template="Docker image update for {name} on {node}",
                 device_icon=self.cfg.device_icon,

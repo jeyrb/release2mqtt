@@ -122,13 +122,13 @@ class MqttClient:
 
     async def execute_command(self, msg, on_update_start, on_update_end):
         try:
-            log = self.log.bind(topic=msg.topic,payload=msg.payload)
+            log = self.log.bind(topic=msg.topic, payload=msg.payload)
             log.info("Execution starting")
             payload = json.loads(msg.payload)
             provider = self.providers_by_topic[msg.topic]
             if provider.source_type != payload["source_type"]:
                 log.warn("Unexpected source type %s", payload["source_type"])
-            elif 'command' not in payload or 'name' not in payload:
+            elif "command" not in payload or "name" not in payload:
                 log.warn("Invalid payload in command message")
             else:
                 log.info(
@@ -170,8 +170,7 @@ class MqttClient:
         if msg.topic in self.providers_by_topic:
             self.log.info("Handling message for %s", msg.topic)
             asyncio.run_coroutine_threadsafe(
-                self.execute_command(msg, update_start, update_end), 
-                self.event_loop
+                self.execute_command(msg, update_start, update_end), self.event_loop
             )
         else:
             self.log.warn("Unhandled message: %s", msg.topic)
