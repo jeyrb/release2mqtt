@@ -5,6 +5,7 @@ import os.path
 import structlog
 from model import Discovery, ReleaseProvider
 import subprocess
+import time
 from integrations.git_utils import (
     git_check_update_available,
     git_pull,
@@ -29,6 +30,7 @@ class DockerProvider(ReleaseProvider):
     def update(self, discovery: Discovery):
         log = self.log.bind(container=discovery.name, action="update")
         log.info("Updating")
+        discovery.update_last_attempt=time.time()
         self.fetch(discovery)
         restarted = self.restart(discovery)
         log.info("Updated")
@@ -236,6 +238,8 @@ class DockerProvider(ReleaseProvider):
     
     def hass_state_format(self, discovery):
         return { 
-                    'docker_image_ref': discovery.custom.get('image_ref') 
+                    'docker_image_ref': discovery.custom.get('image_ref'),
+                    'last_update_attempt': time.strftime('%Y-%m-%dT%H:%M:%S.%f',
+                                                         discovery.update_last_attempt) if discovery.update_last_attempt else None
                 }
 

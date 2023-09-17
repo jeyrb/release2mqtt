@@ -23,6 +23,12 @@ common_packages:
     logo_url: https://d1q6f0aelx0por.cloudfront.net/product-logos/library-caddy-logo.png
     release_notes_url: https://github.com/caddyserver/caddy/releases
 
+  uptime-kuma:
+    docker:
+      image_name: louislam/uptime-kuma
+    logo_url: https://raw.githubusercontent.com/louislam/uptime-kuma/0d846be10e4334bc5ac565c9dd9a95eec545fa3c/public/icon.svg
+    release_notes_url: https://github.com/louislam/uptime-kuma/releases
+
   gitea:
     docker:
       image_name: gitea/gitea

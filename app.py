@@ -5,11 +5,13 @@ from integrations.docker import DockerProvider
 from mqtt import MqttClient
 import uuid
 import structlog
+import time
 
 log = structlog.get_logger()
 
 CONF_FILE = "conf/config.yaml"
 PKG_INFO_FILE = "common_packages.yaml"
+UPDATE_INTERVAL=60*60*4
 
 # #TODO
 # Set install in progress
@@ -70,8 +72,11 @@ class App:
 
         self.publisher.publish_hass_state(discovery)
         if discovery.update_policy == "Auto":
-            dlog.info("Initiate auto update")
-            self.publisher.local_message(discovery, "install")
+            if discovery.update_last_attempt is None or time.time()-discovery.update_last_attempt > UPDATE_INTERVAL:
+                dlog.info("Initiate auto update")
+                self.publisher.local_message(discovery, "install")
+            else:
+                dlog.info("Skipping auto update")
 
 
 if __name__ == "__main__":

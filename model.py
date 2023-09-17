@@ -32,6 +32,7 @@ class Discovery:
         self.device_icon = device_icon
         self.status = status
         self.update_policy = update_policy
+        self.update_last_attempt = None
         self.custom = custom or {}
 
 
