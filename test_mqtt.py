@@ -1,43 +1,58 @@
 from pytest_mqtt.model import MqttMessage
 import pytest
-from model import Discovery
-from mqtt import MqttClient, MqttHandler
+from model import ReleaseProvider, Discovery
+from mqtt import MqttClient
 from config import MqttConfig, HomeAssistantConfig, NodeConfig
-from time import sleep
 import time
+import asyncio
 
 
 @pytest.mark.capmqtt_decode_utf8
-def test_publish(mosquitto,capmqtt):
-    config=MqttConfig()
-    hass_config=HomeAssistantConfig()
-    node_config=NodeConfig()
-    uut=MqttClient(config,node_config,hass_config)
-    #ßuut.connect()
-    uut.publish('test.topic.123',{'foo':'abc','bar':False})
-    assert capmqtt.messages == [
-        MqttMessage(topic="test.topic.123", payload='{"foo": "abc", "bar": false}', userdata=None),
-    ]
+def test_publish(mocker, mosquitto, capmqtt):
+    config = MqttConfig()
+    hass_config = HomeAssistantConfig()
+    node_config = NodeConfig()
+    config.host, config.port = mosquitto
+    uut = MqttClient(config, node_config, hass_config)
+    uut.start()
+
+    uut.publish("test.topic.123", {"foo": "abc", "bar": False})
+    assert (
+        MqttMessage(
+            topic="test.topic.123",
+            payload='{"foo": "abc", "bar": false}',
+            userdata=None,
+        )
+        in capmqtt.messages
+    )
+
 
 @pytest.mark.capmqtt_decode_utf8
 @pytest.mark.asyncio
-async def test_handler(mosquitto,capmqtt):
-    config=MqttConfig()
-    hass_config=HomeAssistantConfig()
-    node_config=NodeConfig()
-    uut=MqttClient(config,node_config,hass_config)
-    #uut.connect()
-    capture=[]
-    def func(user_data,msg,discovery):
-        capture.append(msg)
-        capture.append(discovery)
+async def test_handler(mocker, mosquitto, event_loop):
+    config = MqttConfig()
+    hass_config = HomeAssistantConfig()
+    node_config = NodeConfig()
+    node_config.name = "testing"
+    config.host, config.port = mosquitto
+    uut = MqttClient(config, node_config, hass_config)
+    uut.start(event_loop=event_loop)
 
-    discovery=Discovery('unit_test_fixture','fixture001')
-    uut.subscribe('test.status.abc',MqttHandler(discovery))
-    capmqtt.publish(topic="test.status.abc", payload="qux")
-    uut.loop_once()
-    cutoff=time.time()+15
-    while time.time()<=cutoff and len(capture)<2:
-        sleep(0.2)
-    assert capture[1]['src']==123
-    assert capture[0].payload==b'qux'
+    provider = mocker.Mock(spec=ReleaseProvider)
+    provider.source_type = "unit_test"
+    discovery = Discovery(provider, "qux")
+    provider.command.return_value = discovery
+    provider.hass_state_format.return_value = {}
+
+    payload = {"source_type": provider.source_type, "name": "qux", "command": "install"}
+    topic_name = uut.subscribe_hass_command(provider)
+    uut.publish(
+        topic=topic_name,
+        payload=payload
+    )
+
+    cutoff = time.time() + 10
+    while time.time() <= cutoff and not provider.command.called:
+        await asyncio.sleep(0.5)
+        
+    provider.command.assert_called_with("qux", "install", mocker.ANY, mocker.ANY)
