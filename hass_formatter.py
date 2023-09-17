@@ -38,7 +38,7 @@ def hass_format_state(discovery, node_name, session, in_progress=False):
         "source_session": session,
         "in_progress": in_progress,
     }
-    custom_state=discovery.provider.hass_state_format(discovery)
+    custom_state = discovery.provider.hass_state_format(discovery)
     if custom_state:
         state.update(custom_state)
     return state

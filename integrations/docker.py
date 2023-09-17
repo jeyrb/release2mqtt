@@ -17,6 +17,8 @@ from integrations.git_utils import (
 
 log = structlog.get_logger()
 
+safe_json_dt = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S.%f", t) if t else None
+
 
 class DockerProvider(ReleaseProvider):
     def __init__(self, cfg: DockerConfig, common_pkg_cfg: UpdateInfoConfig):
@@ -29,11 +31,11 @@ class DockerProvider(ReleaseProvider):
 
     def update(self, discovery: Discovery):
         log = self.log.bind(container=discovery.name, action="update")
-        log.info("Updating")
-        discovery.update_last_attempt=time.time()
+        log.info("Updating - last at %s", discovery.update_last_attempt)
+        discovery.update_last_attempt = time.time()
         self.fetch(discovery)
         restarted = self.restart(discovery)
-        log.info("Updated")
+        log.info("Updated - recorded at %s", discovery.update_last_attempt)
         return restarted
 
     def fetch(self, discovery: Discovery):
@@ -235,11 +237,9 @@ class DockerProvider(ReleaseProvider):
             if discovery:
                 on_update_end(discovery)
         return updated
-    
-    def hass_state_format(self, discovery):
-        return { 
-                    'docker_image_ref': discovery.custom.get('image_ref'),
-                    'last_update_attempt': time.strftime('%Y-%m-%dT%H:%M:%S.%f',
-                                                         discovery.update_last_attempt) if discovery.update_last_attempt else None
-                }
 
+    def hass_state_format(self, discovery):
+        return {
+            "docker_image_ref": discovery.custom.get("image_ref"),
+            "last_update_attempt": safe_json_dt(discovery.update_last_attempt),
+        }
