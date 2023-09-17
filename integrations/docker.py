@@ -17,7 +17,7 @@ from integrations.git_utils import (
 
 log = structlog.get_logger()
 
-safe_json_dt = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S.%f", time.gmtime(t)) if t else None
+safe_json_dt = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S.0000", time.gmtime(t)) if t else None
 
 
 class DockerProvider(ReleaseProvider):

@@ -11,7 +11,7 @@ log = structlog.get_logger()
 
 CONF_FILE = "conf/config.yaml"
 PKG_INFO_FILE = "common_packages.yaml"
-UPDATE_INTERVAL=60*60*4
+UPDATE_INTERVAL = 60 * 60 * 4
 
 # #TODO
 # Set install in progress
@@ -72,7 +72,13 @@ class App:
 
         self.publisher.publish_hass_state(discovery)
         if discovery.update_policy == "Auto":
-            if discovery.update_last_attempt is None or time.time()-discovery.update_last_attempt > UPDATE_INTERVAL:
+            try:
+                last_update = time.mktime(
+                    time.strptime(discovery.update_last_attempt, "%Y-%m-%dT%H:%M:%S.%f")
+                )
+            except Exception:
+                last_update = None
+            if last_update is None or time.time() - last_update > UPDATE_INTERVAL:
                 dlog.info("Initiate auto update")
                 self.publisher.local_message(discovery, "install")
             else:
