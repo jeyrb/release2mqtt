@@ -12,6 +12,7 @@ class Discovery:
         can_update=False,
         status="on",
         update_policy=None,
+        update_last_attempt=None,
         release_url=None,
         release_summary=None,
         title_template="Update for {name} on {node}",
@@ -32,7 +33,7 @@ class Discovery:
         self.device_icon = device_icon
         self.status = status
         self.update_policy = update_policy
-        self.update_last_attempt = None
+        self.update_last_attempt = update_last_attempt
         self.custom = custom or {}
 
 
