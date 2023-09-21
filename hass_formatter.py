@@ -37,6 +37,7 @@ def hass_format_state(discovery, node_name, session, in_progress=False):
         "release_summary": discovery.release_summary,
         "source_session": session,
         "in_progress": in_progress,
+        "auto_update": discovery.update_policy == 'Auto'
     }
     custom_state = discovery.provider.hass_state_format(discovery)
     if custom_state:

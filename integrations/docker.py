@@ -105,11 +105,11 @@ class DockerProvider(ReleaseProvider):
             image_ref = None
             image_name = None
         try:
-            local_version = c.image.attrs["RepoDigests"][-1].split("@")[1][7:19]
+            local_versions = [ i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"] ]
         except Exception as e:
             log.warn("Cannot determine local version: %s", e)
             log.warn("RepoDigests=%s", c.image.attrs.get("RepoDigests"))
-            local_version = None
+            local_versions = None
 
         relnotes_url = None
         picture_url = self.cfg.default_entity_picture_url
@@ -146,11 +146,14 @@ class DockerProvider(ReleaseProvider):
             )
 
             reg_data = None
-            if image_ref and local_version:
+            latest_version = local_version = 'Unknown'
+            
+            if image_ref and local_versions:
                 retries_left = 3
                 while reg_data is None and retries_left > 0:
                     try:
                         reg_data = self.client.images.get_registry_data(image_ref)
+                        latest_version = reg_data and reg_data.short_id[7:]
                     except Exception as e:
                         retries_left -= 1
                         if retries_left == 0:
@@ -158,7 +161,13 @@ class DockerProvider(ReleaseProvider):
                         else:
                             log.debug("Failed to fetch registry data, retrying")
 
-            local_version = local_version or "Unknown"
+            if local_versions:
+                # might be multiple RepoDigests if image has been pulled multiple times with diff manifests
+                if latest_version in local_versions:
+                    local_version = latest_version
+                else:
+                    local_version = local_versions[0]
+                    
             image_ref = image_ref or ""
             compose_path = c.labels.get("com.docker.compose.project.working_dir")
 
@@ -193,10 +202,8 @@ class DockerProvider(ReleaseProvider):
                 release_url=relnotes_url,
                 current_version=local_version,
                 update_policy=update_policy,
-                update_last_attempt=original_discovery
-                and original_discovery.update_last_attempt
-                or None,
-                latest_version=reg_data and reg_data.short_id[7:] or local_version,
+                update_last_attempt=original_discovery and original_discovery.update_last_attempt or None,
+                latest_version=latest_version,
                 title_template="Docker image update for {name} on {node}",
                 device_icon=self.cfg.device_icon,
                 can_update=can_update,
