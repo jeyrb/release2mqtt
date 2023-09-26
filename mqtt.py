@@ -85,7 +85,7 @@ class MqttClient:
                     )
                 if session is None or session != last_scan_session:
                     log.info("Removing %s [%s]", msg.topic, session)
-                    cleaner.publish(msg.topic, None, retain=False)
+                    cleaner.publish(msg.topic, "", retain=True)
                 else:
                     log.debug(
                         "Retaining topic with current sesssion: %s",
