@@ -203,7 +203,7 @@ class DockerProvider(ReleaseProvider):
                 current_version=local_version,
                 update_policy=update_policy,
                 update_last_attempt=original_discovery and original_discovery.update_last_attempt or None,
-                latest_version=latest_version,
+                latest_version=latest_version if latest_version !='Unknown' else local_version,
                 title_template="Docker image update for {name} on {node}",
                 device_icon=self.cfg.device_icon,
                 can_update=can_update,
