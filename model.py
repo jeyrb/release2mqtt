@@ -35,6 +35,9 @@ class Discovery:
         self.update_policy = update_policy
         self.update_last_attempt = update_last_attempt
         self.custom = custom or {}
+        
+    def __repr__(self):
+        return f'Discovery(\'{self.name}\',\'{self.source_type}\')'
 
 
 class ReleaseProvider:
