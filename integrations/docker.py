@@ -215,15 +215,15 @@ class DockerProvider(ReleaseProvider):
 
     async def scan(self, session: str):
         log = self.log.bind(session=session, action="scan")
-        c=r=0
+        containers=results=0
         for c in self.client.containers.list():
-            c=c+1
+            containers=containers+1
             result = self.analyze(c, session)
             if result:
                 self.discoveries[result.name] = result
-                r=r+1
+                results=results+1
                 yield result
-        log.info('Completed',container_count=c,result_count=r)
+        log.info('Completed',container_count=containers,result_count=results)
 
     def command(self, discovery_name, command, on_update_start, on_update_end):
         log = self.log.bind(container=discovery_name, action="command", command=command)
