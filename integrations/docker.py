@@ -227,8 +227,8 @@ class DockerProvider(ReleaseProvider):
         updated = False
         try:
             discovery = self.discoveries.get(discovery_name)
-            if not discovery_name:
-                log.warn("Unknown entity")
+            if not discovery:
+                log.warn("Unknown entity",entity=discovery_name)
             elif command != "install":
                 log.warn("Unknown command")
             else:
