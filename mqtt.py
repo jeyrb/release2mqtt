@@ -126,13 +126,15 @@ class MqttClient:
     def safe_json_decode(self,jsonish):
         if jsonish is None:
            return {}
-        elif jsonish[0] not in ('{', b'{'):
-           try:
-              return json.loads(jsonish[1:-1])
-           except Exception as e:
-               log.warn("JSON decode fail (%s)->(%s)",jsonish,jsonish[1:-1])
-        else:
+        try:
            return json.loads(jsonish)
+        except Exception as e:
+           log.warn("JSON decode fail (%s); %s",jsonish,e)
+        try:
+           return json.loads(jsonish[1:-1])
+        except Exception as e:
+           log.warn("JSON decode fail (%s): %s",jsonish[1:-1],e)
+        return {}
 
     async def execute_command(self, msg, on_update_start, on_update_end):
         try:
