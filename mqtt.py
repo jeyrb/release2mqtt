@@ -77,7 +77,7 @@ class MqttClient:
             if msg.retain:
                 session = None
                 try:
-                    payload = json.loads(msg.payload)
+                    payload = self.safe_json_decode(msg.payload)
                     session = payload.get("source_session")
                 except Exception as e:
                     log.warn(
@@ -123,11 +123,19 @@ class MqttClient:
 
         log.info("Completed clean cycle")
 
+    def safe_json_decode(self,jsonish):
+        if jsonish is None:
+           return {}
+        elif jsonish[1]=="'":
+           return json.loads(jsonish[1:-1])
+        else:
+           return json.loads(jsonish)
+
     async def execute_command(self, msg, on_update_start, on_update_end):
         try:
             log = self.log.bind(topic=msg.topic, payload=msg.payload)
             log.info("Execution starting")
-            payload = json.loads(msg.payload)
+            payload = self.safe_json_decode(msg.payload)
             provider = self.providers_by_topic[msg.topic]
             if provider.source_type != payload["source_type"]:
                 log.warn("Unexpected source type %s", payload["source_type"])
