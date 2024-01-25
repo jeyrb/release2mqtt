@@ -126,7 +126,7 @@ class MqttClient:
     def safe_json_decode(self,jsonish):
         if jsonish is None:
            return {}
-        elif jsonish[0]!="{":
+        elif jsonish[0] not in ('{', b'{'):
            try:
               return json.loads(jsonish[1:-1])
            except Exception as e:
