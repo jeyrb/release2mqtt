@@ -1,0 +1,41 @@
+site_name: Release2MQTT
+site_url: https://jeyrb.github.io/release2mqtt/
+site_description: Notify and take action on server updates via MQTT, with HomeAssistant compatibility
+
+repo_name: jeyrb/release2mqtt
+repo_url: https://github.com/jeyrb/release2mqtt
+
+theme:
+  name: material
+  highlightjs: true
+  features:
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate 
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        # See: https://mkdocstrings.github.io/python/usage/
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            summary: true
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.pathconverter:
+      absolute: true
+  - smarty
+  - toc:
+      permalink: true
+  - sane_lists
+  - pymdownx.snippets:
+      check_paths: true
+
+

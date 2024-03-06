@@ -21,6 +21,7 @@ Example use of environment variables, e.g. for secrets:
 mqtt:
     password: ${oc.env:MQTT_PASS}
 ```
+### Customizing images and release notes
 
 Individual docker containers can have customized entity pictures or release notes, using env variables:
 
@@ -29,6 +30,15 @@ Individual docker containers can have customized entity pictures or release note
       - REL2MQTT_PICTURE=https://frigate.video/images/logo.svg
       - REL2MQTT_RELNOTES=https://github.com/blakeblackshear/frigate/releases
 ```
+
+The images will show up in the *Update* section of *Settings* menu in HomeAssistant,
+as will the release notes link.
+
+### Automated updates
+
+If Docker containers should be immediately updated, without any confirmation
+or trigger, *e.g.* from the HomeAssistant update dialog, then set `REL2MQTT_UPDATE`
+to `Auto` ( it defaults to `Passive`)
 
 ### Custom docker builds
 
@@ -55,7 +65,7 @@ be read/write if automated install required.
 Any updates that have support for automated install will automatically show in the
 Home Assistant settings page:
 
-![Example Home Assistant settings page](docs/images/hass_update_page.png "Home Assistant Updates")
+![Example Home Assistant settings page](images/hass_update_page.png "Home Assistant Updates")
 
 If the package supports automated update, then *Skip* and *Install* buttons will appear on the Home Assistant
 interface, and the package can be remotely fetched and the component restarted.

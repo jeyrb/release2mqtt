@@ -1,4 +1,23 @@
+[tool.black]
+line-length = 128
+
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = [
+    "tests",
+]
+norecursedirs = [
+    ".git",
+    "templates",
+]
+
 addopts = [
     "--import-mode=importlib",
+    "--timeout=30",
+    "--cov-report=xml:cov.xml",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov=custom_components.supernotify",
+    "--cov-fail-under=80",
+    "--allow-hosts=127.0.0.1,127.0.1.1,localhost"
 ]
