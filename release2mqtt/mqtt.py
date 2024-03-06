@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import paho.mqtt.client as mqtt
 import paho.mqtt
+from paho.mqtt.enums import CallbackAPIVersion
 from .config import MqttConfig, NodeConfig, HomeAssistantConfig
 import asyncio
 import time
@@ -23,7 +24,8 @@ class MqttClient:
         log = self.log.bind(action="start")
         try:
             self.event_loop = event_loop or asyncio.get_event_loop()
-            self.client = mqtt.Client(client_id="release2mqtt_%s" % self.node_cfg.name, clean_session=True)
+            self.client = mqtt.Client(callback_api_version=CallbackAPIVersion.VERSION1,
+                                    client_id="release2mqtt_%s" % self.node_cfg.name, clean_session=True)
             self.client.username_pw_set(self.cfg.user, password=self.cfg.password)
             self.client.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
 
