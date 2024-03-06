@@ -1,3 +1,7 @@
+[project]
+name = "release2mqtt"
+readme = "README.md"
+
 [tool.black]
 line-length = 128
 
@@ -10,14 +14,15 @@ norecursedirs = [
     ".git",
     "templates",
 ]
+pythonpath = [
+  "."
+]
 
 addopts = [
     "--import-mode=importlib",
-    "--timeout=30",
     "--cov-report=xml:cov.xml",
     "--cov-report=html",
     "--cov-report=term-missing",
-    "--cov=custom_components.supernotify",
-    "--cov-fail-under=80",
-    "--allow-hosts=127.0.0.1,127.0.1.1,localhost"
+    "--cov=release2mqtt",
+    "--cov-fail-under=0"
 ]

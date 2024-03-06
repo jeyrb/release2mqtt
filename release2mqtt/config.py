@@ -96,8 +96,11 @@ def load_app_config(conf_file_path):
     if os.path.exists(conf_file_path):
         cfg = OmegaConf.merge(base_cfg, OmegaConf.load(conf_file_path))
     else:
-        with open(conf_file_path, "w") as f:
-            f.write(OmegaConf.to_yaml(base_cfg))
+        try:
+            with open(conf_file_path, "w") as f:
+                f.write(OmegaConf.to_yaml(base_cfg))
+        except Exception as e:
+            log.error("Unable to write config file to %s: %s", conf_file_path, e)
         cfg = base_cfg
 
     if cfg.node.name is None:

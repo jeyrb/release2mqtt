@@ -1,12 +1,12 @@
 import docker
-from config import DockerConfig, UpdateInfoConfig
+from release2mqtt.config import DockerConfig, UpdateInfoConfig
 from docker.models.containers import Container
 import os.path
 import structlog
-from model import Discovery, ReleaseProvider
+from release2mqtt.model import Discovery, ReleaseProvider
 import subprocess
 import time
-from integrations.git_utils import (
+from .git_utils import (
     git_check_update_available,
     git_pull,
     git_timestamp,

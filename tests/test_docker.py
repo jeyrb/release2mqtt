@@ -1,4 +1,4 @@
-import integrations.docker as mut
+import release2mqtt.integrations.docker as mut
 from docker import DockerClient
 from docker.models.containers import Container, ContainerCollection
 from docker.models.images import Image, RegistryData
