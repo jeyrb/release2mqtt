@@ -37,7 +37,7 @@ class MqttClient:
 
             self.client.loop_start()
 
-            log.info("Connected to broker at %s:%s" % (self.cfg.host, self.cfg.port))
+            log.info("Connected to broker",host=self.cfg.host,port=self.cfg.port)
         except Exception as e:
             log.error(
                 "Failed to connect to broker %s:%s - %s",
@@ -57,6 +57,9 @@ class MqttClient:
 
     def on_connect(self, _client, _userdata, _flags, rc):
         self.log.info("Connected to broker", result_code=rc)
+        for topic in self.providers_by_topic:
+            self.log.info("(Re)subscribing", topic=topic)
+            self.client.subscribe(topic)
 
     def on_disconnect(self, _client, _userdata, rc):
         self.log.info("Disconnected from broker", result_code=rc)
@@ -74,7 +77,7 @@ class MqttClient:
             if msg.retain:
                 session = None
                 try:
-                    payload = json.loads(msg.payload)
+                    payload = self.safe_json_decode(msg.payload)
                     session = payload.get("source_session")
                 except Exception as e:
                     log.warn(
@@ -120,11 +123,24 @@ class MqttClient:
 
         log.info("Completed clean cycle")
 
+    def safe_json_decode(self,jsonish):
+        if jsonish is None:
+           return {}
+        try:
+           return json.loads(jsonish)
+        except Exception as e:
+           log.warn("JSON decode fail (%s); %s",jsonish,e)
+        try:
+           return json.loads(jsonish[1:-1])
+        except Exception as e:
+           log.warn("JSON decode fail (%s): %s",jsonish[1:-1],e)
+        return {}
+
     async def execute_command(self, msg, on_update_start, on_update_end):
         try:
             log = self.log.bind(topic=msg.topic, payload=msg.payload)
             log.info("Execution starting")
-            payload = json.loads(msg.payload)
+            payload = self.safe_json_decode(msg.payload)
             provider = self.providers_by_topic[msg.topic]
             if provider.source_type != payload["source_type"]:
                 log.warn("Unexpected source type %s", payload["source_type"])
@@ -233,9 +249,9 @@ class MqttClient:
     def subscribe_hass_command(self, provider):
         topic = self.command_topic(provider)
         if topic in self.providers_by_topic:
-            self.log.debug("Skipping subscription for %s", topic)
+            self.log.debug("Skipping subscription", topic=topic)
         else:
-            self.log.info("Handler subscribing to %s", topic)
+            self.log.info("Handler subscribing", topic=topic)
             self.providers_by_topic[topic] = provider
             self.client.subscribe(topic)
         return topic
