@@ -1,6 +1,13 @@
 # release2mqtt
 
-Publish new release version info to MQTT, with support for HomeAssistant auto discovery
+Perioidically check for new versions of components being available, and publish new release version info to MQTT.
+HomeAssistant auto discovery is supported, so all updates can be seen in the same place as HomeAssistant's
+own components and add-ins.
+
+Currently only Docker containers are supported, either via an image registry check, or a git repo for source.
+
+Components can also be updated, either automatically or triggered via MQTT, for example by hitting the *Install*
+button in the HomeAssistant update dialog.
 
 ## Install
 
