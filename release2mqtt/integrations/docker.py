@@ -130,7 +130,7 @@ class DockerProvider(ReleaseProvider):
         )
         try:
             env_str = c.attrs["Config"]["Env"]
-            c_env = dict(env.split("=") for env in env_str if "==" not in env)
+            c_env = dict(env.split("=",maxsplit=1) for env in env_str if "==" not in env)
             picture_url = env_override("REL2MQTT_PICTURE", picture_url)
             relnotes_url = env_override("REL2MQTT_RELNOTES", relnotes_url)
 
