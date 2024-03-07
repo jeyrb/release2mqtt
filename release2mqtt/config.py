@@ -7,6 +7,7 @@ import structlog
 
 log = structlog.get_logger()
 
+
 @dataclass
 class MqttConfig:
     host: str = "localhost"
@@ -23,9 +24,7 @@ class DockerConfig:
     allow_pull: bool = True
     allow_restart: bool = True
     allow_build: bool = True
-    default_entity_picture_url: str = (
-        "https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png"
-    )
+    default_entity_picture_url: str = "https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png"
     device_icon: str = "mdi:train-car-container"
 
 
@@ -37,9 +36,7 @@ class HomeAssistantDiscoveryConfig:
 
 @dataclass
 class HomeAssistantConfig:
-    discovery: HomeAssistantDiscoveryConfig = field(
-        default_factory=HomeAssistantDiscoveryConfig
-    )
+    discovery: HomeAssistantDiscoveryConfig = field(default_factory=HomeAssistantDiscoveryConfig)
     state_topic_suffix: str = "state"
 
 
@@ -87,7 +84,7 @@ def load_package_info(pkginfo_file_path):
     else:
         log.warn("No common package update info found at %s", pkginfo_file_path)
         cfg = OmegaConf.structured(UpdateInfoConfig)
-    OmegaConf.set_readonly(cfg, True)   
+    OmegaConf.set_readonly(cfg, True)
     return cfg
 
 

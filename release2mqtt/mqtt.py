@@ -24,8 +24,11 @@ class MqttClient:
         log = self.log.bind(action="start")
         try:
             self.event_loop = event_loop or asyncio.get_event_loop()
-            self.client = mqtt.Client(callback_api_version=CallbackAPIVersion.VERSION1,
-                                    client_id="release2mqtt_%s" % self.node_cfg.name, clean_session=True)
+            self.client = mqtt.Client(
+                callback_api_version=CallbackAPIVersion.VERSION1,
+                client_id="release2mqtt_%s" % self.node_cfg.name,
+                clean_session=True,
+            )
             self.client.username_pw_set(self.cfg.user, password=self.cfg.password)
             self.client.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
 
@@ -62,9 +65,11 @@ class MqttClient:
     async def clean_topics(self, provider, last_scan_session, timeout=30):
         log = self.log.bind(action="clean")
         log.info("Starting clean cycle")
-        cleaner = mqtt.Client(callback_api_version=CallbackAPIVersion.VERSION1,
-                              client_id="release2mqtt_clean_%s" % self.node_cfg.name, 
-                              clean_session=True)
+        cleaner = mqtt.Client(
+            callback_api_version=CallbackAPIVersion.VERSION1,
+            client_id="release2mqtt_clean_%s" % self.node_cfg.name,
+            clean_session=True,
+        )
         cleaner.username_pw_set(self.cfg.user, password=self.cfg.password)
         cleaner.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
 
