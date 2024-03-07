@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import paho.mqtt.client as mqtt
 import paho.mqtt
 from paho.mqtt.enums import CallbackAPIVersion
@@ -260,5 +260,5 @@ class MqttClient:
 
 @dataclass
 class LocalMessage:
-    topic = None
-    payload = None
+    topic: str = field(default=None)
+    payload: str = field(default=None)
