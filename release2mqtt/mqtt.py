@@ -1,20 +1,19 @@
+from dataclasses import dataclass, field
 import paho.mqtt.client as mqtt
 import paho.mqtt
-from config import MqttConfig, NodeConfig, HomeAssistantConfig
-import logging as log
+from paho.mqtt.enums import CallbackAPIVersion
+from .config import MqttConfig, NodeConfig, HomeAssistantConfig
 import asyncio
 import time
 import json
-from hass_formatter import hass_format_config, hass_format_state
+from .hass_formatter import hass_format_config, hass_format_state
 import structlog
 
 log = structlog.get_logger()
 
 
 class MqttClient:
-    def __init__(
-        self, cfg: MqttConfig, node_cfg: NodeConfig, hass_cfg: HomeAssistantConfig
-    ):
+    def __init__(self, cfg: MqttConfig, node_cfg: NodeConfig, hass_cfg: HomeAssistantConfig):
         self.cfg = cfg
         self.node_cfg = node_cfg
         self.hass_cfg = hass_cfg
@@ -26,7 +25,9 @@ class MqttClient:
         try:
             self.event_loop = event_loop or asyncio.get_event_loop()
             self.client = mqtt.Client(
-                client_id="release2mqtt_%s" % self.node_cfg.name, clean_session=True
+                callback_api_version=CallbackAPIVersion.VERSION1,
+                client_id="release2mqtt_%s" % self.node_cfg.name,
+                clean_session=True,
             )
             self.client.username_pw_set(self.cfg.user, password=self.cfg.password)
             self.client.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
@@ -37,7 +38,7 @@ class MqttClient:
 
             self.client.loop_start()
 
-            log.info("Connected to broker at %s:%s" % (self.cfg.host, self.cfg.port))
+            log.info("Connected to broker", host=self.cfg.host, port=self.cfg.port)
         except Exception as e:
             log.error(
                 "Failed to connect to broker %s:%s - %s",
@@ -46,10 +47,7 @@ class MqttClient:
                 e,
                 exc_info=1,
             )
-            raise EnvironmentError(
-                "Connection Failure to %s:%s as %s -- %s"
-                % (self.cfg.host, self.cfg.port, self.cfg.user, e)
-            )
+            raise EnvironmentError("Connection Failure to %s:%s as %s -- %s" % (self.cfg.host, self.cfg.port, self.cfg.user, e))
 
     def stop(self):
         self.client.loop_stop()
@@ -57,6 +55,9 @@ class MqttClient:
 
     def on_connect(self, _client, _userdata, _flags, rc):
         self.log.info("Connected to broker", result_code=rc)
+        for topic in self.providers_by_topic:
+            self.log.info("(Re)subscribing", topic=topic)
+            self.client.subscribe(topic)
 
     def on_disconnect(self, _client, _userdata, rc):
         self.log.info("Disconnected from broker", result_code=rc)
@@ -65,7 +66,9 @@ class MqttClient:
         log = self.log.bind(action="clean")
         log.info("Starting clean cycle")
         cleaner = mqtt.Client(
-            client_id="release2mqtt_clean_%s" % self.node_cfg.name, clean_session=True
+            callback_api_version=CallbackAPIVersion.VERSION1,
+            client_id="release2mqtt_clean_%s" % self.node_cfg.name,
+            clean_session=True,
         )
         cleaner.username_pw_set(self.cfg.user, password=self.cfg.password)
         cleaner.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
@@ -74,7 +77,7 @@ class MqttClient:
             if msg.retain:
                 session = None
                 try:
-                    payload = json.loads(msg.payload)
+                    payload = self.safe_json_decode(msg.payload)
                     session = payload.get("source_session")
                 except Exception as e:
                     log.warn(
@@ -120,11 +123,24 @@ class MqttClient:
 
         log.info("Completed clean cycle")
 
+    def safe_json_decode(self, jsonish):
+        if jsonish is None:
+            return {}
+        try:
+            return json.loads(jsonish)
+        except Exception as e:
+            log.warn("JSON decode fail (%s); %s", jsonish, e)
+        try:
+            return json.loads(jsonish[1:-1])
+        except Exception as e:
+            log.warn("JSON decode fail (%s): %s", jsonish[1:-1], e)
+        return {}
+
     async def execute_command(self, msg, on_update_start, on_update_end):
         try:
             log = self.log.bind(topic=msg.topic, payload=msg.payload)
             log.info("Execution starting")
-            payload = json.loads(msg.payload)
+            payload = self.safe_json_decode(msg.payload)
             provider = self.providers_by_topic[msg.topic]
             if provider.source_type != payload["source_type"]:
                 log.warn("Unexpected source type %s", payload["source_type"])
@@ -137,9 +153,7 @@ class MqttClient:
                     provider.source_type,
                     payload["name"],
                 )
-                updated = provider.command(
-                    payload["name"], payload["command"], on_update_start, on_update_end
-                )
+                updated = provider.command(payload["name"], payload["command"], on_update_start, on_update_end)
                 if updated:
                     self.publish_hass_state(updated)
                 else:
@@ -149,14 +163,15 @@ class MqttClient:
             log.error("Execution failed: %s", e, exc_info=1)
 
     def local_message(self, discovery, command):
-        msg = LocalMessage()
-        msg.topic = self.command_topic(discovery.provider)
-        msg.payload = json.dumps(
-            {
-                "source_type": discovery.source_type,
-                "name": discovery.name,
-                "command": command,
-            }
+        msg = LocalMessage(
+            topic=self.command_topic(discovery.provider),
+            payload=json.dumps(
+                {
+                    "source_type": discovery.source_type,
+                    "name": discovery.name,
+                    "command": command,
+                }
+            ),
         )
         self.on_message(None, None, msg)
 
@@ -169,9 +184,7 @@ class MqttClient:
 
         if msg.topic in self.providers_by_topic:
             self.log.info("Handling message for %s", msg.topic)
-            asyncio.run_coroutine_threadsafe(
-                self.execute_command(msg, update_start, update_end), self.event_loop
-            )
+            asyncio.run_coroutine_threadsafe(self.execute_command(msg, update_start, update_end), self.event_loop)
         else:
             self.log.warn("Unhandled message: %s", msg.topic)
 
@@ -215,9 +228,7 @@ class MqttClient:
             self.node_cfg.name,
             discovery.name,
         )
-        command_topic = (
-            self.command_topic(discovery.provider) if discovery.can_update else None
-        )
+        command_topic = self.command_topic(discovery.provider) if discovery.can_update else None
         self.publish(
             self.config_topic(discovery),
             hass_format_config(
@@ -233,9 +244,9 @@ class MqttClient:
     def subscribe_hass_command(self, provider):
         topic = self.command_topic(provider)
         if topic in self.providers_by_topic:
-            self.log.debug("Skipping subscription for %s", topic)
+            self.log.debug("Skipping subscription", topic=topic)
         else:
-            self.log.info("Handler subscribing to %s", topic)
+            self.log.info("Handler subscribing", topic=topic)
             self.providers_by_topic[topic] = provider
             self.client.subscribe(topic)
         return topic
@@ -247,6 +258,7 @@ class MqttClient:
         self.client.publish(topic, payload=json.dumps(payload), qos=0, retain=True)
 
 
+@dataclass
 class LocalMessage:
-    topic = None
-    payload = None
+    topic: str = field(default=None)
+    payload: str = field(default=None)

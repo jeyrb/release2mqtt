@@ -12,8 +12,7 @@ def hass_format_config(
         "device_class": None,  # not firmware, so defaults to null
         "unique_id": object_id,
         "state_topic": state_topic,
-        "command_topic": command_topic,
-        "payload_install": '{"source_type":"%s","name":"%s","command":"install"}'
+        "payload_install": '\'{"source_type":"%s","name":"%s","command":"install"}\''
         % (discovery.source_type, discovery.name),
         "source_session": session,
         "supported_features": features,
@@ -23,6 +22,8 @@ def hass_format_config(
         "latest_version_topic": state_topic,
         "latest_version_template": "{{value_json.latest_version}}",
     }
+    if command_topic:
+        config["command_topic"]=command_topic
     config.update(discovery.provider.hass_config_format(discovery))
     return config
 

@@ -5,6 +5,7 @@ conf/
 __pycache__/
 *.py[cod]
 *$py.class
+cov.xml
 
 .vscode/
 

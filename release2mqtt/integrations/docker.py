@@ -1,12 +1,12 @@
 import docker
-from config import DockerConfig, UpdateInfoConfig
+from release2mqtt.config import DockerConfig, UpdateInfoConfig
 from docker.models.containers import Container
 import os.path
 import structlog
-from model import Discovery, ReleaseProvider
+from release2mqtt.model import Discovery, ReleaseProvider
 import subprocess
 import time
-from integrations.git_utils import (
+from .git_utils import (
     git_check_update_available,
     git_pull,
     git_timestamp,
@@ -17,7 +17,9 @@ from integrations.git_utils import (
 
 log = structlog.get_logger()
 
-safe_json_dt = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S.0000", time.gmtime(t)) if t else None
+
+def safe_json_dt(t):
+    return time.strftime("%Y-%m-%dT%H:%M:%S.0000", time.gmtime(t)) if t else None
 
 
 class DockerProvider(ReleaseProvider):
@@ -75,9 +77,7 @@ class DockerProvider(ReleaseProvider):
         compose_path = discovery.custom.get("compose_path")
         if compose_path:
             log.info("Restarting")
-            proc = subprocess.run(
-                "docker-compose up --detach", shell=True, cwd=compose_path
-            )
+            proc = subprocess.run("docker-compose up --detach", shell=True, cwd=compose_path)
             if proc.returncode == 0:
                 log.info("Restart via compose successful")
                 return True
@@ -100,12 +100,12 @@ class DockerProvider(ReleaseProvider):
         try:
             image_ref = c.image.tags[0]
             image_name = image_ref.split(":")[0]
-        except:
+        except Exception as _:
             log.warn("No tags found")
             image_ref = None
             image_name = None
         try:
-            local_versions = [ i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"] ]
+            local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
         except Exception as e:
             log.warn("Cannot determine local version: %s", e)
             log.warn("RepoDigests=%s", c.image.attrs.get("RepoDigests"))
@@ -115,22 +115,14 @@ class DockerProvider(ReleaseProvider):
         picture_url = self.cfg.default_entity_picture_url
 
         for pkg in self.common_pkgs.values():
-            if (
-                pkg.docker is not None
-                and pkg.docker.image_name is not None
-                and pkg.docker.image_name == image_name
-            ):
+            if pkg.docker is not None and pkg.docker.image_name is not None and pkg.docker.image_name == image_name:
                 picture_url = pkg.logo_url
                 relnotes_url = pkg.release_notes_url
 
-        env_override = (
-            lambda env_var, default: default
-            if c_env.get(env_var) is None
-            else c_env.get(env_var)
-        )
+        env_override = lambda env_var, default: default if c_env.get(env_var) is None else c_env.get(env_var)
         try:
             env_str = c.attrs["Config"]["Env"]
-            c_env = dict(env.split("=") for env in env_str if "==" not in env)
+            c_env = dict(env.split("=", maxsplit=1) for env in env_str if "==" not in env)
             picture_url = env_override("REL2MQTT_PICTURE", picture_url)
             relnotes_url = env_override("REL2MQTT_RELNOTES", relnotes_url)
 
@@ -146,8 +138,8 @@ class DockerProvider(ReleaseProvider):
             )
 
             reg_data = None
-            latest_version = local_version = 'Unknown'
-            
+            latest_version = local_version = "Unknown"
+
             if image_ref and local_versions:
                 retries_left = 3
                 while reg_data is None and retries_left > 0:
@@ -157,9 +149,9 @@ class DockerProvider(ReleaseProvider):
                     except Exception as e:
                         retries_left -= 1
                         if retries_left == 0:
-                            log.warn("Failed to fetch registry data")
+                            log.warn("Failed to fetch registry data: %s", e)
                         else:
-                            log.debug("Failed to fetch registry data, retrying")
+                            log.debug("Failed to fetch registry data, retrying: %s", e)
 
             if local_versions:
                 # might be multiple RepoDigests if image has been pulled multiple times with diff manifests
@@ -167,7 +159,7 @@ class DockerProvider(ReleaseProvider):
                     local_version = latest_version
                 else:
                     local_version = local_versions[0]
-                    
+
             image_ref = image_ref or ""
             compose_path = c.labels.get("com.docker.compose.project.working_dir")
 
@@ -203,7 +195,7 @@ class DockerProvider(ReleaseProvider):
                 current_version=local_version,
                 update_policy=update_policy,
                 update_last_attempt=original_discovery and original_discovery.update_last_attempt or None,
-                latest_version=latest_version if latest_version !='Unknown' else local_version,
+                latest_version=latest_version if latest_version != "Unknown" else local_version,
                 title_template="Docker image update for {name} on {node}",
                 device_icon=self.cfg.device_icon,
                 can_update=can_update,
@@ -215,11 +207,15 @@ class DockerProvider(ReleaseProvider):
 
     async def scan(self, session: str):
         log = self.log.bind(session=session, action="scan")
+        containers = results = 0
         for c in self.client.containers.list():
+            containers = containers + 1
             result = self.analyze(c, session)
             if result:
                 self.discoveries[result.name] = result
+                results = results + 1
                 yield result
+        log.info("Completed", container_count=containers, result_count=results)
 
     def command(self, discovery_name, command, on_update_start, on_update_end):
         log = self.log.bind(container=discovery_name, action="command", command=command)
@@ -227,8 +223,8 @@ class DockerProvider(ReleaseProvider):
         updated = False
         try:
             discovery = self.discoveries.get(discovery_name)
-            if not discovery_name:
-                log.warn("Unknown entity")
+            if not discovery:
+                log.warn("Unknown entity", entity=discovery_name)
             elif command != "install":
                 log.warn("Unknown command")
             else:
