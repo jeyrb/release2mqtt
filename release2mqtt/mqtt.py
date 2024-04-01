@@ -72,13 +72,14 @@ class MqttClient:
         )
         cleaner.username_pw_set(self.cfg.user, password=self.cfg.password)
         cleaner.connect(host=self.cfg.host, port=self.cfg.port, keepalive=60)
-        prefixes=[  "%s/update/%s_%s_"
+        prefixes = [
+            "%s/update/%s_%s_"
             % (
                 self.hass_cfg.discovery.prefix,
                 self.node_cfg.name,
                 provider.source_type,
             ),
-                "%s/%s/%s/"
+            "%s/%s/%s/"
             % (
                 self.cfg.topic_root,
                 self.node_cfg.name,
@@ -87,7 +88,7 @@ class MqttClient:
         ]
 
         def cleanup(_client, _userdata, msg):
-            if msg.retain and any( msg.topic.startswith(prefix) for prefix in prefixes):
+            if msg.retain and any(msg.topic.startswith(prefix) for prefix in prefixes):
                 session = None
                 try:
                     payload = self.safe_json_decode(msg.payload)
