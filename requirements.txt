@@ -1,5 +1,5 @@
 docker>=6.1.2
-paho-mqtt>=1.6.1
+paho-mqtt>=2.0.0
 omegaconf>=2.3.0
-structlog>=23.1.0
+structlog>=24.1.0
 rich>=13.5.2
