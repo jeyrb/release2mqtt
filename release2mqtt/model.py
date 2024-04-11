@@ -1,3 +1,6 @@
+from collections.abc import Callable
+
+
 class Discovery:
     """Discovered component from a scan"""
 
@@ -35,28 +38,32 @@ class Discovery:
         self.update_policy = update_policy
         self.update_last_attempt = update_last_attempt
         self.custom = custom or {}
-        
-    def __repr__(self):
-        return f'Discovery(\'{self.name}\',\'{self.source_type}\')'
+
+    def __repr__(self) -> str:
+        """Custom string representation"""
+        return f"Discovery('{self.name}','{self.source_type}')"
 
 
 class ReleaseProvider:
     source_type = "base"
 
-    def update(self, command, discovery):
+    def update(self, discovery: Discovery) -> bool:
+        _ = discovery
+        return False
+
+    def rescan(self, discovery: Discovery) -> Discovery | None:
         pass
 
-    def rescan(self, discovery):
+    async def scan(self, session: str):
         pass
 
-    def scan(self, session):
-        pass
-
-    def hass_config_format(self, discovery):
+    def hass_config_format(self, discovery: Discovery):
+        _ = discovery
         return {}
 
-    def hass_state_format(self, discovery):
+    def hass_state_format(self, discovery: Discovery):
+        _ = discovery
         return {}
 
-    def command(self, payload):
+    def command(self, discovery_name: str, command: str, on_update_start: Callable, on_update_end: Callable):
         pass

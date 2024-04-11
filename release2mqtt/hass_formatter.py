@@ -1,6 +1,4 @@
-def hass_format_config(
-    discovery, object_id, node_name, state_topic, command_topic, session
-):
+def hass_format_config(discovery, object_id, node_name, state_topic, command_topic, session):
     features = []
     if discovery.can_update:
         features.append("INSTALL")
@@ -8,12 +6,13 @@ def hass_format_config(
     if discovery.release_url:
         features.append("RELEASE_NOTES")
     config = {
-        "name": "%s %s on %s" % (discovery.name, discovery.source_type, node_name),
+        "name": f"{discovery.name} {discovery.source_type} on {node_name}",
         "device_class": None,  # not firmware, so defaults to null
         "unique_id": object_id,
         "state_topic": state_topic,
-        "payload_install": '\'{"source_type":"%s","name":"%s","command":"install"}\''
-        % (discovery.source_type, discovery.name),
+        "payload_install": '\'{{"source_type":"{}","name":"{}","command":"install"}}\''.format(
+            discovery.source_type, discovery.name
+        ),
         "source_session": session,
         "supported_features": features,
         "entity_picture": discovery.entity_picture_url,
@@ -23,7 +22,7 @@ def hass_format_config(
         "latest_version_template": "{{value_json.latest_version}}",
     }
     if command_topic:
-        config["command_topic"]=command_topic
+        config["command_topic"] = command_topic
     config.update(discovery.provider.hass_config_format(discovery))
     return config
 
@@ -38,7 +37,7 @@ def hass_format_state(discovery, node_name, session, in_progress=False):
         "release_summary": discovery.release_summary,
         "source_session": session,
         "in_progress": in_progress,
-        "auto_update": discovery.update_policy == 'Auto'
+        "auto_update": discovery.update_policy == "Auto",
     }
     custom_state = discovery.provider.hass_state_format(discovery)
     if custom_state:

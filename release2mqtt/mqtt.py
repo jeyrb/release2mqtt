@@ -1,23 +1,27 @@
-from dataclasses import dataclass, field
-import paho.mqtt.client as mqtt
-import paho.mqtt
-from paho.mqtt.enums import CallbackAPIVersion
-from .config import MqttConfig, NodeConfig, HomeAssistantConfig
 import asyncio
-import time
 import json
-from .hass_formatter import hass_format_config, hass_format_state
+import time
+from dataclasses import dataclass, field
+
+import paho.mqtt
+import paho.mqtt.client as mqtt
 import structlog
+from paho.mqtt.enums import CallbackAPIVersion
+
+from release2mqtt.model import ReleaseProvider
+
+from .config import HomeAssistantConfig, MqttConfig, NodeConfig
+from .hass_formatter import hass_format_config, hass_format_state
 
 log = structlog.get_logger()
 
 
 class MqttClient:
     def __init__(self, cfg: MqttConfig, node_cfg: NodeConfig, hass_cfg: HomeAssistantConfig):
-        self.cfg = cfg
-        self.node_cfg = node_cfg
-        self.hass_cfg = hass_cfg
-        self.providers_by_topic = {}
+        self.cfg: MqttConfig = cfg
+        self.node_cfg: NodeConfig = node_cfg
+        self.hass_cfg: HomeAssistantConfig = hass_cfg
+        self.providers_by_topic: dict[str, ReleaseProvider] = {}
         self.log = structlog.get_logger().bind(host=cfg.host, integration="mqtt")
 
     def start(self, event_loop=None):
@@ -47,7 +51,7 @@ class MqttClient:
                 e,
                 exc_info=1,
             )
-            raise EnvironmentError("Connection Failure to %s:%s as %s -- %s" % (self.cfg.host, self.cfg.port, self.cfg.user, e))
+            raise OSError(f"Connection Failure to {self.cfg.host}:{self.cfg.port} as {self.cfg.user} -- {e}") from e
 
     def stop(self):
         self.client.loop_stop()
@@ -84,7 +88,7 @@ class MqttClient:
                 self.cfg.topic_root,
                 self.node_cfg.name,
                 provider.source_type,
-            )
+            ),
         ]
 
         def cleanup(_client, _userdata, msg):
@@ -105,7 +109,7 @@ class MqttClient:
                     cleaner.publish(msg.topic, "", retain=True)
                 else:
                     log.debug(
-                        "Retaining topic with current sesssion: %s",
+                        "Retaining topic with current session: %s",
                         msg.topic,
                     )
             else:
@@ -198,7 +202,7 @@ class MqttClient:
             self.log.warn("Unhandled message: %s", msg.topic)
 
     def config_topic(self, discovery, sub_topic=None):
-        return "%s/update/%s_%s_%s/update/config" % (
+        return "{}/update/{}_{}_{}/update/config".format(
             self.hass_cfg.discovery.prefix,
             self.node_cfg.name,
             discovery.source_type,
@@ -206,7 +210,7 @@ class MqttClient:
         )
 
     def state_topic(self, discovery):
-        return "%s/%s/%s/%s" % (
+        return "{}/{}/{}/{}".format(
             self.cfg.topic_root,
             self.node_cfg.name,
             discovery.source_type,
@@ -214,7 +218,7 @@ class MqttClient:
         )
 
     def command_topic(self, provider):
-        return "%s/%s/%s" % (
+        return "{}/{}/{}".format(
             self.cfg.topic_root,
             self.node_cfg.name,
             provider.source_type,
@@ -232,7 +236,7 @@ class MqttClient:
         )
 
     def publish_hass_config(self, discovery):
-        object_id = "%s_%s_%s" % (
+        object_id = "{}_{}_{}".format(
             discovery.source_type,
             self.node_cfg.name,
             discovery.name,
@@ -269,5 +273,5 @@ class MqttClient:
 
 @dataclass
 class LocalMessage:
-    topic: str = field(default=None)
-    payload: str = field(default=None)
+    topic: str | None = field(default=None)
+    payload: str | None = field(default=None)

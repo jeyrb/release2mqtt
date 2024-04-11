@@ -1,9 +1,8 @@
-from dataclasses import dataclass, field
-from typing import Optional, Dict
-from omegaconf import OmegaConf
 import os
-from omegaconf import MISSING
+from dataclasses import dataclass, field
+
 import structlog
+from omegaconf import MISSING, OmegaConf
 
 log = structlog.get_logger()
 
@@ -42,7 +41,7 @@ class HomeAssistantConfig:
 
 @dataclass
 class NodeConfig:
-    name: Optional[str] = None
+    name: str | None = None
 
 
 @dataclass
@@ -67,14 +66,14 @@ class DockerPackageUpdateInfo:
 
 @dataclass
 class PackageUpdateInfo:
-    docker: Optional[DockerPackageUpdateInfo] = field(default_factory=DockerPackageUpdateInfo)
-    logo_url: Optional[str] = None
-    release_notes_url: Optional[str] = None
+    docker: DockerPackageUpdateInfo | None = field(default_factory=DockerPackageUpdateInfo)
+    logo_url: str | None = None
+    release_notes_url: str | None = None
 
 
 @dataclass
 class UpdateInfoConfig:
-    common_packages: Dict[str, PackageUpdateInfo] = field(default_factory=lambda: {})
+    common_packages: dict[str, PackageUpdateInfo] = field(default_factory=lambda: {})
 
 
 def load_package_info(pkginfo_file_path):
@@ -94,7 +93,7 @@ def load_app_config(conf_file_path):
         cfg = OmegaConf.merge(base_cfg, OmegaConf.load(conf_file_path))
     else:
         try:
-            with open(conf_file_path, "w") as f:
+            with open(conf_file_path, "w", encoding="utf-8") as f:
                 f.write(OmegaConf.to_yaml(base_cfg))
         except Exception as e:
             log.error("Unable to write config file to %s: %s", conf_file_path, e)

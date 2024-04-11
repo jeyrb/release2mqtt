@@ -1,8 +1,9 @@
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import patch, Mock
 
 
 @pytest.fixture
-def mock_mqtt_client():
+def mock_mqtt_client() -> Mock:
     mock = Mock(spec="mqtt.Client")
     return mock

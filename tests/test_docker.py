@@ -1,8 +1,9 @@
-import release2mqtt.integrations.docker as mut
-from docker import DockerClient
-from docker.models.containers import Container, ContainerCollection
-from docker.models.images import Image, RegistryData
 import pytest
+from docker import DockerClient  # type: ignore
+from docker.models.containers import Container, ContainerCollection  # type: ignore
+from docker.models.images import Image, RegistryData  # type: ignore
+
+import release2mqtt.integrations.docker as mut
 
 
 @pytest.mark.asyncio
@@ -38,8 +39,8 @@ async def test_scanner(mocker):
         ),
     ]
     mocker.patch("docker.from_env", return_value=client)
-    uut = mut.DockerProvider(mut.DockerConfig(),mut.UpdateInfoConfig())
-    session='unit_123'
+    uut = mut.DockerProvider(mut.DockerConfig(), mut.UpdateInfoConfig())
+    session = "unit_123"
     results = [d async for d in uut.scan(session)]
 
     unchanged = [d for d in results if d.current_version == d.latest_version]
@@ -51,9 +52,7 @@ async def test_scanner(mocker):
     assert len(changed) == 2
 
 
-def build_mock_container(
-    mocker, tag, picture=None, relnotes=None, opsys="linux", arch="arm64"
-):
+def build_mock_container(mocker, tag, picture=None, relnotes=None, opsys="linux", arch="arm64"):
     c = mocker.Mock(spec=Container)
     c.image = mocker.Mock(spec=Image)
     c.image.tags = [tag]
@@ -62,7 +61,7 @@ def build_mock_container(
     c.image.attrs["Architecture"] = arch
     bare_tag = tag.split(":")[0]
     long_hash = "9e2bbca079387d7965c3a9cee6d0c53f4f4e63ff7637877a83c4c05f2a666112"
-    c.image.attrs["RepoDigests"] = ["%s@sha256:%s" % (bare_tag, long_hash)]
+    c.image.attrs["RepoDigests"] = [f"{bare_tag}@sha256:{long_hash}"]
     c.attrs = {}
     c.attrs["Config"] = {}
     c.attrs["Config"]["Env"] = []

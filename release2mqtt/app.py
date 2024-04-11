@@ -1,11 +1,13 @@
 import asyncio
 import logging
+import time
+import uuid
+
+import structlog
+
 from .config import load_app_config, load_package_info
 from .integrations.docker import DockerProvider
 from .mqtt import MqttClient
-import uuid
-import structlog
-import time
 
 log = structlog.get_logger()
 
@@ -26,15 +28,9 @@ class App:
     def __init__(self):
         self.cfg = load_app_config(CONF_FILE)
         self.common_pkg = load_package_info(PKG_INFO_FILE)
-        structlog.configure(
-            wrapper_class=structlog.make_filtering_bound_logger(
-                logging.getLevelName(self.cfg.log.level)
-            )
-        )
+        structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(self.cfg.log.level)))
 
-        self.publisher = MqttClient(
-            self.cfg.mqtt, self.cfg.node, self.cfg.homeassistant
-        )
+        self.publisher = MqttClient(self.cfg.mqtt, self.cfg.node, self.cfg.homeassistant)
 
         self.scanners = []
         if self.cfg.docker.enabled:
@@ -73,9 +69,7 @@ class App:
         self.publisher.publish_hass_state(discovery)
         if discovery.update_policy == "Auto":
             try:
-                last_update = time.mktime(
-                    time.strptime(discovery.update_last_attempt, "%Y-%m-%dT%H:%M:%S.%f")
-                )
+                last_update = time.mktime(time.strptime(discovery.update_last_attempt, "%Y-%m-%dT%H:%M:%S.%f"))
             except Exception:
                 last_update = None
             if last_update is None or time.time() - last_update > UPDATE_INTERVAL:

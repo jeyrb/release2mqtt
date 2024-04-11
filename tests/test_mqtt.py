@@ -1,11 +1,13 @@
-import pytest
-from release2mqtt.model import ReleaseProvider, Discovery
-from release2mqtt.mqtt import MqttClient
-from release2mqtt.config import MqttConfig, HomeAssistantConfig, NodeConfig
-import time
-from unittest.mock import patch, Mock
 import asyncio
 import json
+import time
+from unittest.mock import Mock, patch
+
+import pytest
+
+from release2mqtt.config import HomeAssistantConfig, MqttConfig, NodeConfig
+from release2mqtt.model import Discovery, ReleaseProvider
+from release2mqtt.mqtt import MqttClient
 
 
 async def test_publish(mocker, mock_mqtt_client):

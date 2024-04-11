@@ -1,17 +1,16 @@
-import docker
-from release2mqtt.config import DockerConfig, UpdateInfoConfig
-from docker.models.containers import Container
 import os.path
-import structlog
-from release2mqtt.model import Discovery, ReleaseProvider
 import subprocess
 import time
-from .git_utils import (
-    git_check_update_available,
-    git_pull,
-    git_timestamp,
-    git_trust,
-)
+from typing import Any
+
+import docker  # type: ignore
+import structlog
+from docker.models.containers import Container  # type: ignore
+
+from release2mqtt.config import DockerConfig, PackageUpdateInfo, UpdateInfoConfig
+from release2mqtt.model import Discovery, ReleaseProvider
+
+from .git_utils import git_check_update_available, git_pull, git_timestamp, git_trust
 
 # TODO: distinguish docker build from docker pull
 
@@ -24,15 +23,15 @@ def safe_json_dt(t):
 
 class DockerProvider(ReleaseProvider):
     def __init__(self, cfg: DockerConfig, common_pkg_cfg: UpdateInfoConfig):
-        self.client = docker.from_env()
-        self.cfg = cfg
-        self.common_pkgs = common_pkg_cfg.common_packages
-        self.source_type = "docker"
-        self.discoveries = {}
-        self.log = structlog.get_logger().bind(integration="docker")
+        self.client: docker.DockerClient = docker.from_env()
+        self.cfg: DockerConfig = cfg
+        self.common_pkgs: dict[str, PackageUpdateInfo] = common_pkg_cfg.common_packages
+        self.source_type: str = "docker"
+        self.discoveries: dict[str, Discovery] = {}
+        self.log: Any = structlog.get_logger().bind(integration="docker")
 
-    def update(self, discovery: Discovery):
-        log = self.log.bind(container=discovery.name, action="update")
+    def update(self, discovery: Discovery) -> bool:
+        log: Any = self.log.bind(container=discovery.name, action="update")
         log.info("Updating - last at %s", discovery.update_last_attempt)
         discovery.update_last_attempt = time.time()
         self.fetch(discovery)
@@ -59,67 +58,69 @@ class DockerProvider(ReleaseProvider):
             image = self.client.images.pull(image_ref, platform=platform)
             log.info("Pulled", image_id=image.id)
 
-    def build(self, discovery: Discovery, compose_path: str):
+    def build(self, discovery: Discovery, compose_path: str) -> bool:
         log = self.log.bind(container=discovery.name, action="build")
         log.info("Building")
-        proc = subprocess.run("docker-compose build", shell=True, cwd=compose_path)
+        proc = subprocess.run("docker-compose build", shell=True, check=False, cwd=compose_path)
         if proc.returncode == 0:
             log.info("Build via compose successful")
             return True
-        else:
-            log.warn(
-                "Build failed: %s",
-                proc.returncode,
-            )
+        log.warn(
+            "Build failed: %s",
+            proc.returncode,
+        )
+        return False
 
-    def restart(self, discovery: Discovery):
+    def restart(self, discovery: Discovery) -> bool:
         log = self.log.bind(container=discovery.name, action="restart")
         compose_path = discovery.custom.get("compose_path")
         if compose_path:
             log.info("Restarting")
-            proc = subprocess.run("docker-compose up --detach", shell=True, cwd=compose_path)
+            proc = subprocess.run("docker-compose up --detach", check=False, shell=True, cwd=compose_path)
             if proc.returncode == 0:
                 log.info("Restart via compose successful")
                 return True
-            else:
-                log.warn(
-                    "Restart failed: %s",
-                    proc.returncode,
-                )
+            log.warn(
+                "Restart failed: %s",
+                proc.returncode,
+            )
+        return False
 
-    def rescan(self, discovery: Discovery):
+    def rescan(self, discovery: Discovery) -> Discovery | None:
         log = self.log.bind(container=discovery.name, action="rescan")
         c = self.client.containers.get(discovery.name)
         if c:
             return self.analyze(c, discovery.session, original_discovery=discovery)
-        else:
-            log.warn("Unable to find container for rescan")
+        log.warn("Unable to find container for rescan")
+        return None
 
     def analyze(self, c: Container, session: str, original_discovery=None):
-        log = self.log.bind(container=c.name, action="analyze")
+        logger = self.log.bind(container=c.name, action="analyze")
         try:
             image_ref = c.image.tags[0]
             image_name = image_ref.split(":")[0]
-        except Exception as _:
-            log.warn("No tags found")
+        except Exception as e:
+            logger.warn("No tags found (%s)", e)
             image_ref = None
             image_name = None
         try:
             local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
         except Exception as e:
-            log.warn("Cannot determine local version: %s", e)
-            log.warn("RepoDigests=%s", c.image.attrs.get("RepoDigests"))
+            logger.warn("Cannot determine local version: %s", e)
+            logger.warn("RepoDigests=%s", c.image.attrs.get("RepoDigests"))
             local_versions = None
 
-        relnotes_url = None
-        picture_url = self.cfg.default_entity_picture_url
+        relnotes_url: str | None = None
+        picture_url: str | None = self.cfg.default_entity_picture_url
 
         for pkg in self.common_pkgs.values():
             if pkg.docker is not None and pkg.docker.image_name is not None and pkg.docker.image_name == image_name:
                 picture_url = pkg.logo_url
                 relnotes_url = pkg.release_notes_url
 
-        env_override = lambda env_var, default: default if c_env.get(env_var) is None else c_env.get(env_var)
+        def env_override(env_var, default):
+            return default if c_env.get(env_var) is None else c_env.get(env_var)
+
         try:
             env_str = c.attrs["Config"]["Env"]
             c_env = dict(env.split("=", maxsplit=1) for env in env_str if "==" not in env)
@@ -149,9 +150,9 @@ class DockerProvider(ReleaseProvider):
                     except Exception as e:
                         retries_left -= 1
                         if retries_left == 0:
-                            log.warn("Failed to fetch registry data: %s", e)
+                            logger.warn("Failed to fetch registry data: %s", e)
                         else:
-                            log.debug("Failed to fetch registry data, retrying: %s", e)
+                            logger.debug("Failed to fetch registry data, retrying: %s", e)
 
             if local_versions:
                 # might be multiple RepoDigests if image has been pulled multiple times with diff manifests
@@ -163,7 +164,7 @@ class DockerProvider(ReleaseProvider):
             image_ref = image_ref or ""
             compose_path = c.labels.get("com.docker.compose.project.working_dir")
 
-            custom = {}
+            custom: dict[str, Any] = {}
             custom["platform"] = platform
             custom["image_ref"] = image_ref
             custom["compose_path"] = compose_path
@@ -172,13 +173,13 @@ class DockerProvider(ReleaseProvider):
             custom["apt_pkgs"] = c_env.get("REL2MQTT_APT_PKGS")
 
             if c_env.get("REL2MQTT_UPDATE") == "AUTO":
-                log.debug("Auto update policy detected")
+                logger.debug("Auto update policy detected")
                 update_policy = "Auto"
             else:
                 update_policy = "Passive"
 
             if custom["git_repo_path"]:
-                full_repo_path = os.path.join(compose_path, custom["git_repo_path"])
+                full_repo_path: str = os.path.join(compose_path, custom["git_repo_path"])
                 git_trust(full_repo_path)
                 custom["git_local_timestamp"] = git_timestamp(full_repo_path)
             can_update = (
@@ -203,7 +204,8 @@ class DockerProvider(ReleaseProvider):
                 custom=custom,
             )
         except Exception as e:
-            log.error("ERROR %s", e, exc_info=1, container_attrs=c.attrs)
+            logger.error("ERROR %s", e, exc_info=1, container_attrs=c.attrs)
+        return None
 
     async def scan(self, session: str):
         log = self.log.bind(session=session, action="scan")
