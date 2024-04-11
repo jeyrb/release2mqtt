@@ -1,3 +1,5 @@
+[![Rhizomatics Open Source](https://avatars.githubusercontent.com/u/162821163?s=96&v=4)](https://github.com/rhizomatics)
+
 # release2mqtt
 
 Perioidically check for new versions of components being available, and publish new release version info to MQTT.
@@ -76,3 +78,5 @@ Home Assistant settings page:
 
 If the package supports automated update, then *Skip* and *Install* buttons will appear on the Home Assistant
 interface, and the package can be remotely fetched and the component restarted.
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
