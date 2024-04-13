@@ -6,18 +6,25 @@ import structlog
 log = structlog.get_logger()
 
 
-def git_trust(repo_path: str):
+def git_trust(repo_path: str) -> bool:
     try:
         subprocess.run("git config --global --add safe.directory %s" % repo_path, check=True, shell=True, cwd=repo_path)
+        return True
     except Exception as e:
         log.warn("GIT Unable to trust repo at %s: %s", repo_path, e)
+        return False
 
 
 def git_timestamp(repo_path: str) -> datetime.datetime | None:
     result = None
     try:
         result = subprocess.run(
-            "git log -1 --format=%cI --no-show-signature", cwd=repo_path, shell=True, text=True, capture_output=True, check=True
+            r"git log -1 --format=%cI --no-show-signature",
+            cwd=repo_path,
+            shell=True,
+            text=True,
+            capture_output=True,
+            check=True,
         )
         return datetime.datetime.fromisoformat(result.stdout.strip())
     except Exception as e:

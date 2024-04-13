@@ -9,7 +9,7 @@ own components and add-ins.
 Currently only Docker containers are supported, either via an image registry check, or a git repo for source.
 
 Components can also be updated, either automatically or triggered via MQTT, for example by hitting the *Install*
-button in the HomeAssistant update dialog.
+button in the HomeAssistant update dialog. Icons and release notes can be specified for a better HA experience.
 
 ## Install
 

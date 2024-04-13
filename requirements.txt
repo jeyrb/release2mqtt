@@ -1,4 +1,4 @@
-docker>=6.1.2
+docker>=7.0.0
 paho-mqtt>=2.0.0
 omegaconf>=2.3.0
 structlog>=24.1.0

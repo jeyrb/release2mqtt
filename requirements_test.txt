@@ -3,6 +3,8 @@ pytest-mock>=3.12.0
 pytest-asyncio>=0.21.1
 pytest-cov>=4.1.0
 pytest-mqtt>=0.4.0
-pre-commit
-pylint
+pytest-subprocess>=1.5.0
+pre-commit>=3.7.0
+pylint>=3.1.0
 coverage
+setuptools>=69.5.0

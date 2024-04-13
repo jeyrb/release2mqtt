@@ -5,10 +5,11 @@ from dataclasses import dataclass, field
 
 import paho.mqtt
 import paho.mqtt.client as mqtt
+import paho.mqtt.subscribeoptions
 import structlog
 from paho.mqtt.enums import CallbackAPIVersion
 
-from release2mqtt.model import ReleaseProvider
+from release2mqtt.model import Discovery, ReleaseProvider
 
 from .config import HomeAssistantConfig, MqttConfig, NodeConfig
 from .hass_formatter import hass_format_config, hass_format_state
@@ -22,10 +23,12 @@ class MqttClient:
         self.node_cfg: NodeConfig = node_cfg
         self.hass_cfg: HomeAssistantConfig = hass_cfg
         self.providers_by_topic: dict[str, ReleaseProvider] = {}
+        self.event_loop: asyncio.AbstractEventLoop | None = None
+        self.client: mqtt.Client | None = None
         self.log = structlog.get_logger().bind(host=cfg.host, integration="mqtt")
 
     def start(self, event_loop=None):
-        log = self.log.bind(action="start")
+        logger = self.log.bind(action="start")
         try:
             self.event_loop = event_loop or asyncio.get_event_loop()
             self.client = mqtt.Client(
@@ -42,9 +45,9 @@ class MqttClient:
 
             self.client.loop_start()
 
-            log.info("Connected to broker", host=self.cfg.host, port=self.cfg.port)
+            logger.info("Connected to broker", host=self.cfg.host, port=self.cfg.port)
         except Exception as e:
-            log.error(
+            logger.error(
                 "Failed to connect to broker %s:%s - %s",
                 self.cfg.host,
                 self.cfg.port,
@@ -67,8 +70,8 @@ class MqttClient:
         self.log.info("Disconnected from broker", result_code=rc)
 
     async def clean_topics(self, provider, last_scan_session, timeout=30):
-        log = self.log.bind(action="clean")
-        log.info("Starting clean cycle")
+        logger = self.log.bind(action="clean")
+        logger.info("Starting clean cycle")
         cleaner = mqtt.Client(
             callback_api_version=CallbackAPIVersion.VERSION1,
             client_id="release2mqtt_clean_%s" % self.node_cfg.name,
@@ -150,17 +153,17 @@ class MqttClient:
         return {}
 
     async def execute_command(self, msg, on_update_start, on_update_end):
+        logger = self.log.bind(topic=msg.topic, payload=msg.payload)
         try:
-            log = self.log.bind(topic=msg.topic, payload=msg.payload)
-            log.info("Execution starting")
+            logger.info("Execution starting")
             payload = self.safe_json_decode(msg.payload)
             provider = self.providers_by_topic[msg.topic]
             if provider.source_type != payload["source_type"]:
-                log.warn("Unexpected source type %s", payload["source_type"])
+                logger.warn("Unexpected source type %s", payload["source_type"])
             elif "command" not in payload or "name" not in payload:
-                log.warn("Invalid payload in command message")
+                logger.warn("Invalid payload in command message")
             else:
-                log.info(
+                logger.info(
                     "Passing %s command to %s scanner for %s",
                     payload["command"],
                     provider.source_type,
@@ -170,10 +173,10 @@ class MqttClient:
                 if updated:
                     self.publish_hass_state(updated)
                 else:
-                    log.debug("No change to republish after execution")
-            log.info("Execution ended")
+                    logger.debug("No change to republish after execution")
+            logger.info("Execution ended")
         except Exception as e:
-            log.error("Execution failed: %s", e, exc_info=1)
+            logger.error("Execution failed: %s", e, exc_info=1)
 
     def local_message(self, discovery, command):
         msg = LocalMessage(
@@ -201,7 +204,7 @@ class MqttClient:
         else:
             self.log.warn("Unhandled message: %s", msg.topic)
 
-    def config_topic(self, discovery, sub_topic=None):
+    def config_topic(self, discovery: Discovery):
         return "{}/update/{}_{}_{}/update/config".format(
             self.hass_cfg.discovery.prefix,
             self.node_cfg.name,

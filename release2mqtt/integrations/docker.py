@@ -1,18 +1,22 @@
+import datetime
 import os.path
 import subprocess
 import time
-from typing import Any
+import typing
+from collections.abc import AsyncGenerator
+from typing import Any, cast
 
 import docker  # type: ignore
 import structlog
 from docker.models.containers import Container  # type: ignore
+from docker.models.images import Image  # type: ignore
 
 from release2mqtt.config import DockerConfig, PackageUpdateInfo, UpdateInfoConfig
 from release2mqtt.model import Discovery, ReleaseProvider
 
 from .git_utils import git_check_update_available, git_pull, git_timestamp, git_trust
 
-# TODO: distinguish docker build from docker pull
+# distinguish docker build from docker pull?
 
 log = structlog.get_logger()
 
@@ -31,20 +35,20 @@ class DockerProvider(ReleaseProvider):
         self.log: Any = structlog.get_logger().bind(integration="docker")
 
     def update(self, discovery: Discovery) -> bool:
-        log: Any = self.log.bind(container=discovery.name, action="update")
-        log.info("Updating - last at %s", discovery.update_last_attempt)
+        logger: Any = self.log.bind(container=discovery.name, action="update")
+        logger.info("Updating - last at %s", discovery.update_last_attempt)
         discovery.update_last_attempt = time.time()
         self.fetch(discovery)
         restarted = self.restart(discovery)
-        log.info("Updated - recorded at %s", discovery.update_last_attempt)
+        logger.info("Updated - recorded at %s", discovery.update_last_attempt)
         return restarted
 
     def fetch(self, discovery: Discovery):
-        log = self.log.bind(container=discovery.name, action="fetch")
-        git_repo_path = discovery.custom.get("git_repo_path")
-        compose_path = discovery.custom.get("compose_path")
-        image_ref = discovery.custom.get("image_ref")
-        platform = discovery.custom.get("platform")
+        logger = self.log.bind(container=discovery.name, action="fetch")
+        git_repo_path: str | None = discovery.custom.get("git_repo_path")
+        compose_path: str | None = discovery.custom.get("compose_path")
+        image_ref: str | None = discovery.custom.get("image_ref")
+        platform: str | None = discovery.custom.get("platform")
         if git_repo_path:
             if compose_path and not os.path.isabs(git_repo_path):
                 full_repo_path = os.path.join(compose_path, git_repo_path)
@@ -52,66 +56,83 @@ class DockerProvider(ReleaseProvider):
                 full_repo_path = git_repo_path
             if git_check_update_available(full_repo_path):
                 git_pull(full_repo_path)
-            self.build(discovery, compose_path)
+            if compose_path:
+                self.build(discovery, compose_path)
+            else:
+                logger.warn("No compose path configured")
         elif image_ref:
-            log.info("Pulling", image_ref=image_ref, platform=platform)
-            image = self.client.images.pull(image_ref, platform=platform)
-            log.info("Pulled", image_id=image.id)
+            logger.info("Pulling", image_ref=image_ref, platform=platform)
+            image: Image = typing.cast(Image, self.client.images.pull(image_ref, platform=platform, all_tags=False))
+            if image:
+                logger.info("Pulled", image_id=image.id, image_ref=image_ref, platform=platform)
+            else:
+                logger.warn("Unable to pull", image_ref=image_ref, platform=platform)
 
     def build(self, discovery: Discovery, compose_path: str) -> bool:
-        log = self.log.bind(container=discovery.name, action="build")
-        log.info("Building")
+        logger = self.log.bind(container=discovery.name, action="build")
+        logger.info("Building")
         proc = subprocess.run("docker-compose build", shell=True, check=False, cwd=compose_path)
         if proc.returncode == 0:
-            log.info("Build via compose successful")
+            logger.info("Build via compose successful")
             return True
-        log.warn(
+        logger.warn(
             "Build failed: %s",
             proc.returncode,
         )
         return False
 
     def restart(self, discovery: Discovery) -> bool:
-        log = self.log.bind(container=discovery.name, action="restart")
+        logger = self.log.bind(container=discovery.name, action="restart")
         compose_path = discovery.custom.get("compose_path")
         if compose_path:
-            log.info("Restarting")
+            logger.info("Restarting")
             proc = subprocess.run("docker-compose up --detach", check=False, shell=True, cwd=compose_path)
             if proc.returncode == 0:
-                log.info("Restart via compose successful")
+                logger.info("Restart via compose successful")
                 return True
-            log.warn(
+            logger.warn(
                 "Restart failed: %s",
                 proc.returncode,
             )
         return False
 
     def rescan(self, discovery: Discovery) -> Discovery | None:
-        log = self.log.bind(container=discovery.name, action="rescan")
-        c = self.client.containers.get(discovery.name)
+        logger = self.log.bind(container=discovery.name, action="rescan")
+        c: Container = typing.cast(Container, self.client.containers.get(discovery.name))
         if c:
             return self.analyze(c, discovery.session, original_discovery=discovery)
-        log.warn("Unable to find container for rescan")
+        logger.warn("Unable to find container for rescan")
         return None
 
     def analyze(self, c: Container, session: str, original_discovery=None):
         logger = self.log.bind(container=c.name, action="analyze")
-        try:
-            image_ref = c.image.tags[0]
-            image_name = image_ref.split(":")[0]
-        except Exception as e:
-            logger.warn("No tags found (%s)", e)
-            image_ref = None
-            image_name = None
-        try:
-            local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
-        except Exception as e:
-            logger.warn("Cannot determine local version: %s", e)
-            logger.warn("RepoDigests=%s", c.image.attrs.get("RepoDigests"))
-            local_versions = None
+        image_ref = None
+        image_name = None
+        local_versions = None
+        if c.attrs is None:
+            logger.warn("No container attributes found, discovery rejected")
+            return None
+        if c.name is None:
+            logger.warn("No container name found, discovery rejected")
+            return None
+        if c.image is None:
+            logger.warn("No image or image attributes found")
+        else:
+            try:
+                image_ref = c.image.tags[0]
+                image_name = image_ref.split(":")[0]
+            except Exception as e:
+                logger.warn("No tags found (%s)", e)
+
+            try:
+                local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
+            except Exception as e:
+                logger.warn("Cannot determine local version: %s", e)
+                logger.warn("RepoDigests=%s", c.image.attrs.get("RepoDigests"))
 
         relnotes_url: str | None = None
         picture_url: str | None = self.cfg.default_entity_picture_url
+        platform: str = "Unknown"
 
         for pkg in self.common_pkgs.values():
             if pkg.docker is not None and pkg.docker.image_name is not None and pkg.docker.image_name == image_name:
@@ -126,17 +147,17 @@ class DockerProvider(ReleaseProvider):
             c_env = dict(env.split("=", maxsplit=1) for env in env_str if "==" not in env)
             picture_url = env_override("REL2MQTT_PICTURE", picture_url)
             relnotes_url = env_override("REL2MQTT_RELNOTES", relnotes_url)
-
-            platform = "/".join(
-                filter(
-                    None,
-                    [
-                        c.image.attrs["Os"],
-                        c.image.attrs["Architecture"],
-                        c.image.attrs.get("Variant"),
-                    ],
+            if c.image is not None and c.image.attrs is not None:
+                platform = "/".join(
+                    filter(
+                        None,
+                        [
+                            c.image.attrs["Os"],
+                            c.image.attrs["Architecture"],
+                            c.image.attrs.get("Variant"),
+                        ],
+                    )
                 )
-            )
 
             reg_data = None
             latest_version = local_version = "Unknown"
@@ -161,16 +182,19 @@ class DockerProvider(ReleaseProvider):
                 else:
                     local_version = local_versions[0]
 
-            image_ref = image_ref or ""
-            compose_path = c.labels.get("com.docker.compose.project.working_dir")
+            def save_if_set(key: str, val: datetime.datetime | str | None) -> None:
+                if val is not None:
+                    custom[key] = val
 
-            custom: dict[str, Any] = {}
+            image_ref = image_ref or ""
+
+            custom: dict[str, str | datetime.datetime] = {}
             custom["platform"] = platform
             custom["image_ref"] = image_ref
-            custom["compose_path"] = compose_path
-            custom["compose_version"] = c.labels.get("com.docker.compose.version")
-            custom["git_repo_path"] = c_env.get("REL2MQTT_GIT_REPO_PATH")
-            custom["apt_pkgs"] = c_env.get("REL2MQTT_APT_PKGS")
+            save_if_set("compose_path", c.labels.get("com.docker.compose.project.working_dir"))
+            save_if_set("compose_version", c.labels.get("com.docker.compose.version"))
+            save_if_set("git_repo_path", c_env.get("REL2MQTT_GIT_REPO_PATH"))
+            save_if_set("apt_pkgs", c_env.get("REL2MQTT_APT_PKGS"))
 
             if c_env.get("REL2MQTT_UPDATE") == "AUTO":
                 logger.debug("Auto update policy detected")
@@ -178,14 +202,16 @@ class DockerProvider(ReleaseProvider):
             else:
                 update_policy = "Passive"
 
-            if custom["git_repo_path"]:
-                full_repo_path: str = os.path.join(compose_path, custom["git_repo_path"])
+            if custom.get("git_repo_path") and custom.get("compose_path"):
+                full_repo_path: str = os.path.join(
+                    typing.cast(str, custom.get("compose_path")), typing.cast(str, custom.get("git_repo_path"))
+                )
                 git_trust(full_repo_path)
-                custom["git_local_timestamp"] = git_timestamp(full_repo_path)
-            can_update = (
-                (self.cfg.allow_pull and image_ref)
-                or (self.cfg.allow_restart and compose_path)
-                or (self.cfg.allow_build and custom["git_repo_path"])
+                save_if_set("git_local_timestamp", git_timestamp(full_repo_path))
+            can_update: bool = (
+                (self.cfg.allow_pull and image_ref is not None)
+                or (self.cfg.allow_restart and custom.get("compose_path") is not None)
+                or (self.cfg.allow_build and custom.get("git_repo_path") is not None)
             )
             return Discovery(
                 self,
@@ -207,41 +233,42 @@ class DockerProvider(ReleaseProvider):
             logger.error("ERROR %s", e, exc_info=1, container_attrs=c.attrs)
         return None
 
-    async def scan(self, session: str):
-        log = self.log.bind(session=session, action="scan")
+    async def scan(self, session: str) -> AsyncGenerator[Discovery, None]:  # type: ignore
+        logger = self.log.bind(session=session, action="scan")
         containers = results = 0
         for c in self.client.containers.list():
             containers = containers + 1
-            result = self.analyze(c, session)
+            result = self.analyze(cast(Container, c), session)
             if result:
                 self.discoveries[result.name] = result
                 results = results + 1
                 yield result
-        log.info("Completed", container_count=containers, result_count=results)
+        logger.info("Completed", container_count=containers, result_count=results)
 
-    def command(self, discovery_name, command, on_update_start, on_update_end):
-        log = self.log.bind(container=discovery_name, action="command", command=command)
-        log.info("Executing")
-        updated = False
+    def command(self, discovery_name, command, on_update_start, on_update_end) -> bool:
+        logger = self.log.bind(container=discovery_name, action="command", command=command)
+        logger.info("Executing")
+        discovery: Discovery | None = None
+        updated: bool = False
         try:
             discovery = self.discoveries.get(discovery_name)
             if not discovery:
-                log.warn("Unknown entity", entity=discovery_name)
+                logger.warn("Unknown entity", entity=discovery_name)
             elif command != "install":
-                log.warn("Unknown command")
+                logger.warn("Unknown command")
             else:
                 if discovery.can_update:
-                    log.info("Starting update ...")
+                    logger.info("Starting update ...")
                     on_update_start(discovery)
                     if self.update(discovery):
-                        log.info("Rescanning ...")
-                        updated = self.rescan(discovery)
-                        log.info("Rescanned %s", updated)
+                        logger.info("Rescanning ...")
+                        updated = self.rescan(discovery) is not None
+                        logger.info("Rescanned %s", updated)
                     else:
-                        log.info("Rescan with no result")
+                        logger.info("Rescan with no result")
                         on_update_end(discovery)
         except Exception as e:
-            log.error("Failed to handle: %s", e, exc_info=1)
+            logger.error("Failed to handle: %s", e, exc_info=1)
             if discovery:
                 on_update_end(discovery)
         return updated

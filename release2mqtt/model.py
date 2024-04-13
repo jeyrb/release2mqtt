@@ -1,4 +1,5 @@
-from collections.abc import Callable
+from abc import abstractmethod
+from collections.abc import AsyncGenerator, Callable
 
 
 class Discovery:
@@ -6,20 +7,20 @@ class Discovery:
 
     def __init__(
         self,
-        provider,
-        name,
-        session=None,
-        entity_picture_url=None,
-        current_version=None,
-        latest_version=None,
-        can_update=False,
+        provider: "ReleaseProvider",
+        name: str,
+        session: str,
+        entity_picture_url: str | None = None,
+        current_version: str | None = None,
+        latest_version: str | None = None,
+        can_update: bool = False,
         status="on",
         update_policy=None,
         update_last_attempt=None,
-        release_url=None,
-        release_summary=None,
-        title_template="Update for {name} on {node}",
-        device_icon=None,
+        release_url: str | None = None,
+        release_summary: str | None = None,
+        title_template: str = "Update for {name} on {node}",
+        device_icon: str | None = None,
         custom=None,
     ):
         self.provider = provider
@@ -54,8 +55,9 @@ class ReleaseProvider:
     def rescan(self, discovery: Discovery) -> Discovery | None:
         pass
 
-    async def scan(self, session: str):
-        pass
+    @abstractmethod
+    async def scan(self, session: str) -> AsyncGenerator[Discovery, None]:
+        """Scan for components to monitor"""
 
     def hass_config_format(self, discovery: Discovery):
         _ = discovery
@@ -65,5 +67,6 @@ class ReleaseProvider:
         _ = discovery
         return {}
 
-    def command(self, discovery_name: str, command: str, on_update_start: Callable, on_update_end: Callable):
-        pass
+    @abstractmethod
+    def command(self, discovery_name: str, command: str, on_update_start: Callable, on_update_end: Callable) -> bool:
+        """Execute a command on a discovered component"""

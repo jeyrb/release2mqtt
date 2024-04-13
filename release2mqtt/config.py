@@ -1,4 +1,5 @@
 import os
+import typing
 from dataclasses import dataclass, field
 
 import structlog
@@ -76,7 +77,7 @@ class UpdateInfoConfig:
     common_packages: dict[str, PackageUpdateInfo] = field(default_factory=lambda: {})
 
 
-def load_package_info(pkginfo_file_path):
+def load_package_info(pkginfo_file_path) -> UpdateInfoConfig:
     if os.path.exists(pkginfo_file_path):
         log.debug("Loading common package update info from %s", pkginfo_file_path)
         cfg = OmegaConf.load(pkginfo_file_path)
@@ -84,10 +85,10 @@ def load_package_info(pkginfo_file_path):
         log.warn("No common package update info found at %s", pkginfo_file_path)
         cfg = OmegaConf.structured(UpdateInfoConfig)
     OmegaConf.set_readonly(cfg, True)
-    return cfg
+    return typing.cast(UpdateInfoConfig, cfg)
 
 
-def load_app_config(conf_file_path):
+def load_app_config(conf_file_path) -> Config:
     base_cfg = OmegaConf.structured(Config)
     if os.path.exists(conf_file_path):
         cfg = OmegaConf.merge(base_cfg, OmegaConf.load(conf_file_path))
@@ -103,4 +104,4 @@ def load_app_config(conf_file_path):
         cfg.node.name = os.uname().nodename
 
     OmegaConf.set_readonly(cfg, True)
-    return cfg
+    return typing.cast(Config, cfg)

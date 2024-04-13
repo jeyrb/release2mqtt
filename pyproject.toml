@@ -17,6 +17,14 @@ disable = [
     "R0903", # (too-few-public-methods)
     "R0913", # (too-many-arguments)
     "W0105", # (pointless-string-statement)
+    "W0718", # general ex eptions
+    "C0209", # fstrings
+    "C0412", # grouped imports
+    "C0103", # snake-case
+    "R0902", # too many attrs
+    "R0914", # too many locals
+    "R0912", # too many branches
+    "R0915", # too many statements
 ]
 
 [tool.flake8]

@@ -5,12 +5,12 @@ repos:
       - id: pyupgrade
         args: [--py311-plus]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.6
+    rev: v0.3.7
     hooks:
       - id: ruff
         types: [python]
   - repo: https://github.com/psf/black
-    rev: 24.3.0
+    rev: 24.4.0
     hooks:
       - id: black
         args:
@@ -72,16 +72,19 @@ repos:
           - pytest
           - paho-mqtt
           - omegaconf
-  - repo: https://github.com/PyCQA/prospector
-    rev: v1.10.3
-    hooks:
-      - id: prospector
-        exclude: ^(tests)/.+\.py$
-        additional_dependencies:
-          - pytest
   - repo: local
     hooks:
       - id: isort
         name: isort
         entry: isort
         language: system
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        args:
+          [
+            "-rn", # Only display messages
+            "-sn", # Don't display the score
+        ]
