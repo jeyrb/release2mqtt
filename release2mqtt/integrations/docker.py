@@ -207,7 +207,7 @@ class DockerProvider(ReleaseProvider):
                 git_trust(full_repo_path)
                 save_if_set("git_local_timestamp", git_timestamp(full_repo_path))
             can_update: bool = (
-                (self.cfg.allow_pull and image_ref is not None)
+                (self.cfg.allow_pull and image_ref is not None and local_version != "Unknown")
                 or (self.cfg.allow_restart and custom.get("compose_path") is not None)
                 or (self.cfg.allow_build and custom.get("git_repo_path") is not None)
             )
@@ -265,6 +265,8 @@ class DockerProvider(ReleaseProvider):
                     else:
                         logger.info("Rescan with no result")
                         on_update_end(discovery)
+                else:
+                    logger.warning("Update not supported for this container")
         except Exception as e:
             logger.error("Failed to handle: %s", e, exc_info=1)
             if discovery:
