@@ -23,6 +23,7 @@ class Discovery:
         title_template: str = "Update for {name} on {node}",
         device_icon: str | None = None,
         custom: dict[str, Any] | None = None,
+        features: list[str] | None = None,
     ) -> None:
         self.provider: ReleaseProvider = provider
         self.source_type: str = provider.source_type
@@ -40,6 +41,7 @@ class Discovery:
         self.update_policy: str | None = update_policy
         self.update_last_attempt: float | None = update_last_attempt
         self.custom: dict[str, Any] = custom or {}
+        self.features: list[str] = features or []
 
     def __repr__(self) -> str:
         """Build a custom string representation"""

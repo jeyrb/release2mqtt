@@ -6,12 +6,6 @@ from release2mqtt.model import Discovery
 def hass_format_config(
     discovery: Discovery, object_id: str, node_name: str, state_topic: str, command_topic: str | None, session: str
 ) -> dict[str, Any]:
-    features = []
-    if discovery.can_update:
-        features.append("INSTALL")
-        features.append("PROGRESS")
-    if discovery.release_url:
-        features.append("RELEASE_NOTES")
     config = {
         "name": f"{discovery.name} {discovery.source_type} on {node_name}",
         "device_class": None,  # not firmware, so defaults to null
@@ -19,9 +13,10 @@ def hass_format_config(
         "state_topic": state_topic,
         "payload_install": f'\'{{"source_type":"{discovery.source_type}","name":"{discovery.name}","command":"install"}}\'',
         "source_session": session,
-        "supported_features": features,
+        "supported_features": discovery.features,
         "entity_picture": discovery.entity_picture_url,
         "icon": discovery.device_icon,
+        "can_update": discovery.can_update,
         "update_policy": discovery.update_policy,
         "latest_version_topic": state_topic,
         "latest_version_template": "{{value_json.latest_version}}",

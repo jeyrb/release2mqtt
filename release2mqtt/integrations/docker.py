@@ -19,6 +19,7 @@ from .git_utils import git_check_update_available, git_pull, git_timestamp, git_
 # distinguish docker build from docker pull?
 
 log = structlog.get_logger()
+NO_KNOWN_IMAGE = "UNKNOWN"
 
 
 def safe_json_dt(t: float | None) -> str | None:
@@ -45,11 +46,22 @@ class DockerProvider(ReleaseProvider):
 
     def fetch(self, discovery: Discovery) -> None:
         logger = self.log.bind(container=discovery.name, action="fetch")
-        git_repo_path: str | None = discovery.custom.get("git_repo_path")
-        compose_path: str | None = discovery.custom.get("compose_path")
+
         image_ref: str | None = discovery.custom.get("image_ref")
         platform: str | None = discovery.custom.get("platform")
-        if git_repo_path:
+        if discovery.custom.get("can_pull"):
+            logger.info("Pulling", image_ref=image_ref, platform=platform)
+            image: Image = typing.cast(Image, self.client.images.pull(image_ref, platform=platform, all_tags=False))
+            if image:
+                logger.info("Pulled", image_id=image.id, image_ref=image_ref, platform=platform)
+            else:
+                logger.warn("Unable to pull", image_ref=image_ref, platform=platform)
+        elif discovery.custom.get("can_build"):
+            compose_path: str | None = discovery.custom.get("compose_path")
+            git_repo_path: str | None = discovery.custom.get("git_repo_path")
+            if not compose_path or not git_repo_path:
+                logger.warn("No compose path or git repo path configured, skipped build")
+                return
             if compose_path and not Path(git_repo_path).is_absolute():
                 full_repo_path: Path = Path(compose_path) / git_repo_path
             else:
@@ -59,14 +71,7 @@ class DockerProvider(ReleaseProvider):
             if compose_path:
                 self.build(discovery, compose_path)
             else:
-                logger.warn("No compose path configured")
-        elif image_ref:
-            logger.info("Pulling", image_ref=image_ref, platform=platform)
-            image: Image = typing.cast(Image, self.client.images.pull(image_ref, platform=platform, all_tags=False))
-            if image:
-                logger.info("Pulled", image_id=image.id, image_ref=image_ref, platform=platform)
-            else:
-                logger.warn("Unable to pull", image_ref=image_ref, platform=platform)
+                logger.warn("No compose path configured, skipped build")
 
     def build(self, discovery: Discovery, compose_path: str) -> bool:
         logger = self.log.bind(container=discovery.name, action="build")
@@ -160,7 +165,7 @@ class DockerProvider(ReleaseProvider):
                 )
 
             reg_data = None
-            latest_version = local_version = "Unknown"
+            latest_version = local_version = NO_KNOWN_IMAGE
 
             if image_ref and local_versions:
                 retries_left = 3
@@ -185,7 +190,7 @@ class DockerProvider(ReleaseProvider):
 
             image_ref = image_ref or ""
 
-            custom: dict[str, str | datetime.datetime] = {}
+            custom: dict[str, str | datetime.datetime | bool] = {}
             custom["platform"] = platform
             custom["image_ref"] = image_ref
             save_if_set("compose_path", c.labels.get("com.docker.compose.project.working_dir"))
@@ -206,11 +211,26 @@ class DockerProvider(ReleaseProvider):
 
                 git_trust(full_repo_path)
                 save_if_set("git_local_timestamp", git_timestamp(full_repo_path))
-            can_update: bool = (
-                (self.cfg.allow_pull and image_ref is not None and local_version != "Unknown")
-                or (self.cfg.allow_restart and custom.get("compose_path") is not None)
-                or (self.cfg.allow_build and custom.get("git_repo_path") is not None)
+            features: list[str] = []
+            can_pull: bool = (
+                self.cfg.allow_pull
+                and image_ref is not None
+                and (local_version != NO_KNOWN_IMAGE or latest_version != NO_KNOWN_IMAGE)
             )
+            can_build: bool = self.cfg.allow_build and custom.get("git_repo_path") is not None
+            can_restart: bool = self.cfg.allow_restart and custom.get("compose_path") is not None
+            can_update: bool = False
+            if can_pull or can_build or can_restart:
+                # public install-neutral capabilities and Home Assistant features
+                can_update = True
+                features.append("INSTALL")
+                features.append("PROGRESS")
+            if relnotes_url:
+                features.append("RELEASE_NOTES")
+            custom["can_pull"] = can_pull
+            custom["can_build"] = can_build
+            custom["can_restart"] = can_restart
+
             return Discovery(
                 self,
                 c.name,
@@ -220,12 +240,13 @@ class DockerProvider(ReleaseProvider):
                 current_version=local_version,
                 update_policy=update_policy,
                 update_last_attempt=(original_discovery and original_discovery.update_last_attempt) or None,
-                latest_version=latest_version if latest_version != "Unknown" else local_version,
+                latest_version=latest_version if latest_version != NO_KNOWN_IMAGE else local_version,
                 title_template="Docker image update for {name} on {node}",
                 device_icon=self.cfg.device_icon,
                 can_update=can_update,
                 status=(c.status == "running" and "on") or "off",
                 custom=custom,
+                features=features,
             )
         except Exception as e:
             logger.error("ERROR %s", e, exc_info=1, container_attrs=c.attrs)
