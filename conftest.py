@@ -1,25 +1,24 @@
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import paho.mqtt.client
 import pytest
-from docker import DockerClient  # type: ignore
-from docker.models.containers import Container, ContainerCollection  # type: ignore
-from docker.models.images import Image, RegistryData  # type: ignore
+from docker import DockerClient  # type:ignore[import-not-found]
+from docker.models.containers import Container, ContainerCollection  # type:ignore[import-not-found]
+from docker.models.images import Image, RegistryData  # type:ignore[import-not-found]
 
 
-@pytest.fixture
-def mock_mqtt_client() -> Mock:
-    mock = MagicMock(spec=paho.mqtt.client.Client, name="MQTT Client Fixture")
-    return mock
+@pytest.fixture()
+def mock_mqtt_client() -> paho.mqtt.client.Client:
+    return MagicMock(spec=paho.mqtt.client.Client, name="MQTT Client Fixture")
 
 
-@pytest.fixture
-def mock_docker_client(mocker) -> Mock:
-    client = mocker.Mock(spec=DockerClient)
-    coll = mocker.Mock(spec=ContainerCollection)
+@pytest.fixture()
+def mock_docker_client() -> DockerClient:
+    client = Mock(spec=DockerClient)
+    coll = Mock(spec=ContainerCollection)
 
-    def reg_data_select(v):
-        reg_data = mocker.Mock(spec=RegistryData)
+    def reg_data_select(v: str) -> RegistryData:
+        reg_data = Mock(spec=RegistryData)
         match v:
             case "testy/mctest:latest":
                 reg_data.short_id = "sha256:c5385387575"
@@ -31,27 +30,28 @@ def mock_docker_client(mocker) -> Mock:
                 reg_data.short_id = "sha256:999999999999"
         return reg_data
 
-    client.images.get_registry_data = mocker.Mock(side_effect=reg_data_select)
+    client.images.get_registry_data = Mock(side_effect=reg_data_select)
 
     client.containers = coll
     coll.list.return_value = [
-        build_mock_container(mocker, "testy/mctest:latest", opsys="macos"),
-        build_mock_container(mocker, "ubuntu"),
+        build_mock_container("testy/mctest:latest", opsys="macos"),
+        build_mock_container("ubuntu"),
         build_mock_container(
-            mocker,
             "testy/mctest",
             picture="https://piccy",
             relnotes="https://release",
             arch="amd64",
         ),
     ]
-    mocker.patch("docker.from_env", return_value=client)
+    patch("docker.from_env", return_value=client)
     return client
 
 
-def build_mock_container(mocker, tag, picture=None, relnotes=None, opsys="linux", arch="arm64"):
-    c = mocker.Mock(spec=Container)
-    c.image = mocker.Mock(spec=Image)
+def build_mock_container(
+    tag: str, picture: str | None = None, relnotes: str | None = None, opsys: str = "linux", arch: str = "arm64"
+) -> Container:
+    c = Mock(spec=Container)
+    c.image = Mock(spec=Image)
     c.image.tags = [tag]
     c.image.attrs = {}
     c.image.attrs["Os"] = opsys

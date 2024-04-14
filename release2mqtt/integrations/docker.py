@@ -1,15 +1,15 @@
 import datetime
-import os.path
 import subprocess
 import time
 import typing
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
+from pathlib import Path
 from typing import Any, cast
 
-import docker  # type: ignore
+import docker  # type: ignore[import-not-found]
 import structlog
-from docker.models.containers import Container  # type: ignore
-from docker.models.images import Image  # type: ignore
+from docker.models.containers import Container  # type: ignore[import-not-found]
+from docker.models.images import Image  # type: ignore[import-not-found]
 
 from release2mqtt.config import DockerConfig, PackageUpdateInfo, UpdateInfoConfig
 from release2mqtt.model import Discovery, ReleaseProvider
@@ -21,12 +21,12 @@ from .git_utils import git_check_update_available, git_pull, git_timestamp, git_
 log = structlog.get_logger()
 
 
-def safe_json_dt(t):
+def safe_json_dt(t: float | None) -> str | None:
     return time.strftime("%Y-%m-%dT%H:%M:%S.0000", time.gmtime(t)) if t else None
 
 
 class DockerProvider(ReleaseProvider):
-    def __init__(self, cfg: DockerConfig, common_pkg_cfg: UpdateInfoConfig):
+    def __init__(self, cfg: DockerConfig, common_pkg_cfg: UpdateInfoConfig) -> None:
         self.client: docker.DockerClient = docker.from_env()
         self.cfg: DockerConfig = cfg
         self.common_pkgs: dict[str, PackageUpdateInfo] = common_pkg_cfg.common_packages
@@ -43,17 +43,17 @@ class DockerProvider(ReleaseProvider):
         logger.info("Updated - recorded at %s", discovery.update_last_attempt)
         return restarted
 
-    def fetch(self, discovery: Discovery):
+    def fetch(self, discovery: Discovery) -> None:
         logger = self.log.bind(container=discovery.name, action="fetch")
         git_repo_path: str | None = discovery.custom.get("git_repo_path")
         compose_path: str | None = discovery.custom.get("compose_path")
         image_ref: str | None = discovery.custom.get("image_ref")
         platform: str | None = discovery.custom.get("platform")
         if git_repo_path:
-            if compose_path and not os.path.isabs(git_repo_path):
-                full_repo_path = os.path.join(compose_path, git_repo_path)
+            if compose_path and not Path(git_repo_path).is_absolute():
+                full_repo_path: Path = Path(compose_path) / git_repo_path
             else:
-                full_repo_path = git_repo_path
+                full_repo_path = Path(git_repo_path)
             if git_check_update_available(full_repo_path):
                 git_pull(full_repo_path)
             if compose_path:
@@ -104,7 +104,7 @@ class DockerProvider(ReleaseProvider):
         logger.warn("Unable to find container for rescan")
         return None
 
-    def analyze(self, c: Container, session: str, original_discovery=None):
+    def analyze(self, c: Container, session: str, original_discovery: Discovery | None = None) -> Discovery | None:
         logger = self.log.bind(container=c.name, action="analyze")
         image_ref = None
         image_name = None
@@ -139,7 +139,7 @@ class DockerProvider(ReleaseProvider):
                 picture_url = pkg.logo_url
                 relnotes_url = pkg.release_notes_url
 
-        def env_override(env_var, default):
+        def env_override(env_var: str, default: Any) -> Any | None:
             return default if c_env.get(env_var) is None else c_env.get(env_var)
 
         try:
@@ -156,7 +156,7 @@ class DockerProvider(ReleaseProvider):
                             c.image.attrs["Architecture"],
                             c.image.attrs.get("Variant"),
                         ],
-                    )
+                    ),
                 )
 
             reg_data = None
@@ -177,10 +177,7 @@ class DockerProvider(ReleaseProvider):
 
             if local_versions:
                 # might be multiple RepoDigests if image has been pulled multiple times with diff manifests
-                if latest_version in local_versions:
-                    local_version = latest_version
-                else:
-                    local_version = local_versions[0]
+                local_version = latest_version if latest_version in local_versions else local_versions[0]
 
             def save_if_set(key: str, val: datetime.datetime | str | None) -> None:
                 if val is not None:
@@ -203,9 +200,10 @@ class DockerProvider(ReleaseProvider):
                 update_policy = "Passive"
 
             if custom.get("git_repo_path") and custom.get("compose_path"):
-                full_repo_path: str = os.path.join(
-                    typing.cast(str, custom.get("compose_path")), typing.cast(str, custom.get("git_repo_path"))
+                full_repo_path: Path = Path(cast(str, custom.get("compose_path"))).joinpath(
+                    cast(str, custom.get("git_repo_path"))
                 )
+
                 git_trust(full_repo_path)
                 save_if_set("git_local_timestamp", git_timestamp(full_repo_path))
             can_update: bool = (
@@ -221,19 +219,19 @@ class DockerProvider(ReleaseProvider):
                 release_url=relnotes_url,
                 current_version=local_version,
                 update_policy=update_policy,
-                update_last_attempt=original_discovery and original_discovery.update_last_attempt or None,
+                update_last_attempt=(original_discovery and original_discovery.update_last_attempt) or None,
                 latest_version=latest_version if latest_version != "Unknown" else local_version,
                 title_template="Docker image update for {name} on {node}",
                 device_icon=self.cfg.device_icon,
                 can_update=can_update,
-                status=c.status == "running" and "on" or "off",
+                status=(c.status == "running" and "on") or "off",
                 custom=custom,
             )
         except Exception as e:
             logger.error("ERROR %s", e, exc_info=1, container_attrs=c.attrs)
         return None
 
-    async def scan(self, session: str) -> AsyncGenerator[Discovery, None]:  # type: ignore
+    async def scan(self, session: str) -> AsyncGenerator[Discovery, None]:  # type: ignore  # noqa: PGH003
         logger = self.log.bind(session=session, action="scan")
         containers = results = 0
         for c in self.client.containers.list():
@@ -245,13 +243,13 @@ class DockerProvider(ReleaseProvider):
                 yield result
         logger.info("Completed", container_count=containers, result_count=results)
 
-    def command(self, discovery_name, command, on_update_start, on_update_end) -> bool:
+    def command(self, discovery_name: str, command: str, on_update_start: Callable, on_update_end: Callable) -> bool:
         logger = self.log.bind(container=discovery_name, action="command", command=command)
         logger.info("Executing")
         discovery: Discovery | None = None
         updated: bool = False
         try:
-            discovery = self.discoveries.get(discovery_name)
+            discovery = self.resolve(discovery_name)
             if not discovery:
                 logger.warn("Unknown entity", entity=discovery_name)
             elif command != "install":
@@ -273,7 +271,10 @@ class DockerProvider(ReleaseProvider):
                 on_update_end(discovery)
         return updated
 
-    def hass_state_format(self, discovery):
+    def resolve(self, discovery_name: str) -> Discovery | None:
+        return self.discoveries.get(discovery_name)
+
+    def hass_state_format(self, discovery: Discovery) -> dict:
         return {
             "docker_image_ref": discovery.custom.get("image_ref"),
             "last_update_attempt": safe_json_dt(discovery.update_last_attempt),

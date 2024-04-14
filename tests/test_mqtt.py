@@ -1,7 +1,6 @@
 import asyncio
 import json
 import time
-from collections.abc import Iterator
 from unittest import mock
 from unittest.mock import Mock, patch
 
@@ -13,12 +12,12 @@ from release2mqtt.model import Discovery, ReleaseProvider
 from release2mqtt.mqtt import MqttClient
 
 
-async def test_publish(mock_mqtt_client: Mock):
+async def test_publish(mock_mqtt_client: Mock) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
     node_config = NodeConfig()
 
-    with patch.object(paho.mqtt.client.Client, "__new__", lambda *args, **kwargs: mock_mqtt_client):
+    with patch.object(paho.mqtt.client.Client, "__new__", lambda *_args, **_kwargs: mock_mqtt_client):
         uut = MqttClient(config, node_config, hass_config)
         uut.start()
 
@@ -27,11 +26,11 @@ async def test_publish(mock_mqtt_client: Mock):
         mock_mqtt_client.publish.assert_called_with("test.topic.123", payload='{"foo": "a8", "bar": false}', qos=0, retain=True)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_handler(
     mock_mqtt_client: Mock,
-    event_loop: Iterator[asyncio.AbstractEventLoop],
-):
+    event_loop: asyncio.AbstractEventLoop,
+) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
     node_config = NodeConfig()
@@ -51,7 +50,7 @@ async def test_handler(
         mock_message = Mock()
         mock_message.topic = topic_name
         mock_message.payload = json.dumps(payload)
-        uut.on_message(None, None, mock_message)
+        uut.handle_message(mock_message)
 
         cutoff = time.time() + 10
         while time.time() <= cutoff and not provider.command.called:

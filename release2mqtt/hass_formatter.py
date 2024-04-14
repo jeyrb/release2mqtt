@@ -1,4 +1,11 @@
-def hass_format_config(discovery, object_id, node_name, state_topic, command_topic, session):
+from typing import Any
+
+from release2mqtt.model import Discovery
+
+
+def hass_format_config(
+    discovery: Discovery, object_id: str, node_name: str, state_topic: str, command_topic: str | None, session: str
+) -> dict[str, Any]:
     features = []
     if discovery.can_update:
         features.append("INSTALL")
@@ -10,9 +17,7 @@ def hass_format_config(discovery, object_id, node_name, state_topic, command_top
         "device_class": None,  # not firmware, so defaults to null
         "unique_id": object_id,
         "state_topic": state_topic,
-        "payload_install": '\'{{"source_type":"{}","name":"{}","command":"install"}}\''.format(
-            discovery.source_type, discovery.name
-        ),
+        "payload_install": f'\'{{"source_type":"{discovery.source_type}","name":"{discovery.name}","command":"install"}}\'',
         "source_session": session,
         "supported_features": features,
         "entity_picture": discovery.entity_picture_url,
@@ -27,12 +32,15 @@ def hass_format_config(discovery, object_id, node_name, state_topic, command_top
     return config
 
 
-def hass_format_state(discovery, node_name, session, in_progress=False):
+def hass_format_state(discovery: Discovery, node_name: str, session: str, in_progress: bool = False) -> dict[str, Any]:
+    title: str = (
+        discovery.title_template.format(name=discovery.name, node=node_name) if discovery.title_template else discovery.name
+    )
     state = {
         "state": discovery.status,
         "installed_version": discovery.current_version,
         "latest_version": discovery.latest_version,
-        "title": discovery.title_template.format(name=discovery.name, node=node_name),
+        "title": title,
         "release_url": discovery.release_url,
         "release_summary": discovery.release_summary,
         "source_session": session,

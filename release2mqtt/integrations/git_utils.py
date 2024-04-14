@@ -1,12 +1,13 @@
 import datetime
 import subprocess
+from pathlib import Path
 
 import structlog
 
 log = structlog.get_logger()
 
 
-def git_trust(repo_path: str) -> bool:
+def git_trust(repo_path: Path) -> bool:
     try:
         subprocess.run("git config --global --add safe.directory %s" % repo_path, check=True, shell=True, cwd=repo_path)
         return True
@@ -15,7 +16,7 @@ def git_trust(repo_path: str) -> bool:
         return False
 
 
-def git_timestamp(repo_path: str) -> datetime.datetime | None:
+def git_timestamp(repo_path: Path) -> datetime.datetime | None:
     result = None
     try:
         result = subprocess.run(
@@ -32,7 +33,7 @@ def git_timestamp(repo_path: str) -> datetime.datetime | None:
     return None
 
 
-def git_check_update_available(repo_path: str, timeout: int = 120) -> bool:
+def git_check_update_available(repo_path: Path, timeout: int = 120) -> bool:
     result = None
     try:
         result = subprocess.run(
@@ -51,7 +52,7 @@ def git_check_update_available(repo_path: str, timeout: int = 120) -> bool:
     return False
 
 
-def git_pull(repo_path: str):
+def git_pull(repo_path: Path) -> bool:
     log.info("GIT Pulling git at %s", repo_path)
     proc = subprocess.run("git pull", shell=True, check=False, cwd=repo_path, timeout=300)
     if proc.returncode == 0:

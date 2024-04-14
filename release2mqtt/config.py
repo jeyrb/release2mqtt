@@ -1,6 +1,7 @@
 import os
 import typing
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import structlog
 from omegaconf import MISSING, OmegaConf
@@ -42,7 +43,7 @@ class HomeAssistantConfig:
 
 @dataclass
 class NodeConfig:
-    name: str | None = None
+    name: str = "UNKNOWN"
 
 
 @dataclass
@@ -77,8 +78,8 @@ class UpdateInfoConfig:
     common_packages: dict[str, PackageUpdateInfo] = field(default_factory=lambda: {})
 
 
-def load_package_info(pkginfo_file_path) -> UpdateInfoConfig:
-    if os.path.exists(pkginfo_file_path):
+def load_package_info(pkginfo_file_path: Path) -> UpdateInfoConfig:
+    if pkginfo_file_path.exists():
         log.debug("Loading common package update info from %s", pkginfo_file_path)
         cfg = OmegaConf.load(pkginfo_file_path)
     else:
@@ -88,14 +89,13 @@ def load_package_info(pkginfo_file_path) -> UpdateInfoConfig:
     return typing.cast(UpdateInfoConfig, cfg)
 
 
-def load_app_config(conf_file_path) -> Config:
+def load_app_config(conf_file_path: Path) -> Config:
     base_cfg = OmegaConf.structured(Config)
-    if os.path.exists(conf_file_path):
+    if conf_file_path.exists():
         cfg = OmegaConf.merge(base_cfg, OmegaConf.load(conf_file_path))
     else:
         try:
-            with open(conf_file_path, "w", encoding="utf-8") as f:
-                f.write(OmegaConf.to_yaml(base_cfg))
+            conf_file_path.write_text(OmegaConf.to_yaml(base_cfg))
         except Exception as e:
             log.error("Unable to write config file to %s: %s", conf_file_path, e)
         cfg = base_cfg

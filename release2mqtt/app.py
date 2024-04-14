@@ -2,8 +2,11 @@ import asyncio
 import logging
 import time
 import uuid
+from pathlib import Path
 
 import structlog
+
+from release2mqtt.model import Discovery
 
 from .config import load_app_config, load_package_info
 from .integrations.docker import DockerProvider
@@ -11,21 +14,21 @@ from .mqtt import MqttClient
 
 log = structlog.get_logger()
 
-CONF_FILE = "conf/config.yaml"
-PKG_INFO_FILE = "common_packages.yaml"
+CONF_FILE = Path("conf/config.yaml")
+PKG_INFO_FILE = Path("./common_packages.yaml")
 UPDATE_INTERVAL = 60 * 60 * 4
 
-# #TODO
-# Set install in progress
-# Support apt
-# Retry on registry fetch fail
-# Fetcher in subproc or thread
-# Clear command message after install
-# use git hash as alt to img ref for builds, or daily builds
+# #TODO:
+#  - Set install in progress
+#  - Support apt
+#  - Retry on registry fetch fail
+#  - Fetcher in subproc or thread
+#  - Clear command message after install
+#  - use git hash as alt to img ref for builds, or daily builds
 
 
 class App:
-    def __init__(self):
+    def __init__(self) -> None:
         self.cfg = load_app_config(CONF_FILE)
         self.common_pkg = load_package_info(PKG_INFO_FILE)
         structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(self.cfg.log.level)))
@@ -41,7 +44,7 @@ class App:
             scan_interval=self.cfg.scan_interval,
         )
 
-    async def scan(self):
+    async def scan(self) -> None:
         for scanner in self.scanners:
             log.info("Starting scan", source_type=scanner.source_type)
             session = uuid.uuid4().hex
@@ -53,7 +56,7 @@ class App:
 
             log.info("Scan complete", source_type=scanner.source_type)
 
-    async def run(self):
+    async def run(self) -> None:
         self.publisher.start()
         for scanner in self.scanners:
             self.publisher.subscribe_hass_command(scanner)
@@ -61,18 +64,14 @@ class App:
             await self.scan()
             await asyncio.sleep(self.cfg.scan_interval)
 
-    async def on_discovery(self, discovery):
+    async def on_discovery(self, discovery: Discovery) -> None:
         dlog = log.bind(name=discovery.name)
         if self.cfg.homeassistant.discovery.enabled:
             self.publisher.publish_hass_config(discovery)
 
         self.publisher.publish_hass_state(discovery)
         if discovery.update_policy == "Auto":
-            try:
-                last_update = time.mktime(time.strptime(discovery.update_last_attempt, "%Y-%m-%dT%H:%M:%S.%f"))
-            except Exception:
-                last_update = None
-            if last_update is None or time.time() - last_update > UPDATE_INTERVAL:
+            if discovery.update_last_attempt is None or time.time() - discovery.update_last_attempt > UPDATE_INTERVAL:
                 dlog.info("Initiate auto update")
                 self.publisher.local_message(discovery, "install")
             else:
