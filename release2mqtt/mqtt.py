@@ -200,14 +200,7 @@ class MqttClient:
 
     def local_message(self, discovery: Discovery, command: str) -> None:
         msg = LocalMessage(
-            topic=self.command_topic(discovery.provider),
-            payload=json.dumps(
-                {
-                    "source_type": discovery.source_type,
-                    "name": discovery.name,
-                    "command": command,
-                },
-            ),
+            topic=self.command_topic(discovery.provider), payload="|".join([discovery.source_type, discovery.name, command])
         )
         self.handle_message(msg)
 
