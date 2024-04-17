@@ -1,5 +1,4 @@
 import asyncio
-import json
 import time
 from unittest import mock
 from unittest.mock import Mock, patch
@@ -46,10 +45,9 @@ async def test_handler(
         provider.hass_state_format.return_value = {}
 
         topic_name = uut.subscribe_hass_command(provider)
-        payload = {"source_type": provider.source_type, "name": "qux", "command": "install"}
         mock_message = Mock()
         mock_message.topic = topic_name
-        mock_message.payload = json.dumps(payload)
+        mock_message.payload = "|".join([provider.source_type, "qux", "install"])
         uut.handle_message(mock_message)
 
         cutoff = time.time() + 10

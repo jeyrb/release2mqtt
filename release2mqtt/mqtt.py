@@ -168,23 +168,28 @@ class MqttClient:
         logger = self.log.bind(topic=msg.topic, payload=msg.payload)
         try:
             logger.info("Execution starting")
-            payload = self.safe_json_decode(msg.payload)
+            source_type: str | None = None
+            comp_name: str | None = None
+            command: str | None = None
+            if msg.payload and isinstance(msg.payload, str) and "|" in msg.payload:
+                source_type, comp_name, command = msg.payload.split("|")
+
             provider: ReleaseProvider | None = self.providers_by_topic.get(msg.topic) if msg.topic else None
             if not provider:
                 logger.warn("Unexpected provider type %s", msg.topic)
-            elif provider.source_type != payload["source_type"]:
-                logger.warn("Unexpected source type %s", payload["source_type"])
-            elif "command" not in payload or "name" not in payload:
-                logger.warn("Invalid payload in command message")
+            elif provider.source_type != source_type:
+                logger.warn("Unexpected source type %s", source_type)
+            elif command != "install" or not comp_name:
+                logger.warn("Invalid payload in command message: %s", msg.payload)
             else:
                 logger.info(
                     "Passing %s command to %s scanner for %s",
-                    payload["command"],
-                    provider.source_type,
-                    payload["name"],
+                    command,
+                    source_type,
+                    comp_name,
                 )
-                updated = provider.command(payload["name"], payload["command"], on_update_start, on_update_end)
-                discovery = provider.resolve(payload["name"])
+                updated = provider.command(comp_name, command, on_update_start, on_update_end)
+                discovery = provider.resolve(comp_name)
                 if updated and discovery:
                     self.publish_hass_state(discovery, updated)
                 else:
