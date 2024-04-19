@@ -285,7 +285,7 @@ class DockerProvider(ReleaseProvider):
                         logger.info("Rescanned %s", updated)
                     else:
                         logger.info("Rescan with no result")
-                        on_update_end(discovery)
+                    on_update_end(discovery)
                 else:
                     logger.warning("Update not supported for this container")
         except Exception as e:
