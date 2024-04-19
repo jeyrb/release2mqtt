@@ -49,6 +49,7 @@ ignore = [
     "TD002","TD003","TD005",
     "D103","D100","D101","D102","D104","D107","D415","D400","D415","ANN101","ANN401",
     "S101","C901","FURB113",
+    "RUF029", # enable post-preview when it works
     "S602","S607","S404" ] # subprocess usage
 unfixable = ["B"]
 
