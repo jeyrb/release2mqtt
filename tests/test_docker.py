@@ -24,7 +24,7 @@ async def test_scanner(mock_docker_client: DockerClient) -> None:
     assert len(changed) == 2
 
 
-async def test_build(mock_docker_client: DockerClient, fake_process: FakeProcess) -> None:
+def test_build(mock_docker_client: DockerClient, fake_process: FakeProcess) -> None:
     with patch("docker.from_env", return_value=mock_docker_client):
         uut = mut.DockerProvider(mut.DockerConfig(), mut.UpdateInfoConfig())
         d = Discovery(uut, "build-test-dummy", session="test-123")
