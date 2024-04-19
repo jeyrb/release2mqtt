@@ -171,8 +171,13 @@ class MqttClient:
             source_type: str | None = None
             comp_name: str | None = None
             command: str | None = None
-            if msg.payload and isinstance(msg.payload, str) and "|" in msg.payload:
-                source_type, comp_name, command = msg.payload.split("|")
+            payload: str | None = None
+            if isinstance(msg.payload, bytes):
+                payload = msg.payload.decode("utf-8")
+            elif isinstance(msg.payload, str):
+                payload = msg.payload
+            if payload and "|" in payload:
+                source_type, comp_name, command = payload.split("|")
 
             provider: ReleaseProvider | None = self.providers_by_topic.get(msg.topic) if msg.topic else None
             if not provider:

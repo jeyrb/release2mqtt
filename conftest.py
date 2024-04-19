@@ -6,6 +6,20 @@ from docker import DockerClient  # type:ignore[import-not-found]
 from docker.models.containers import Container, ContainerCollection  # type:ignore[import-not-found]
 from docker.models.images import Image, RegistryData  # type:ignore[import-not-found]
 
+from release2mqtt.model import Discovery, ReleaseProvider  # type:ignore[import-not-found]
+
+
+@pytest.fixture()
+def mock_provider() -> ReleaseProvider:
+    provider = Mock(spec=ReleaseProvider)
+    provider.source_type = "unit_test"
+    provider.command.return_value = True
+    provider.resolve.return_value = Discovery(
+        provider, "fooey", session="test-mqtt-123", current_version="v2", latest_version="v2"
+    )
+    provider.hass_state_format.return_value = {"fixture": "test_exec"}
+    return provider
+
 
 @pytest.fixture()
 def mock_mqtt_client() -> paho.mqtt.client.Client:
