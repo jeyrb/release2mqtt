@@ -71,8 +71,14 @@ class App:
 
         self.publisher.publish_hass_state(discovery)
         if discovery.update_policy == "Auto":
-            if discovery.update_last_attempt is None or time.time() - discovery.update_last_attempt > UPDATE_INTERVAL:
-                dlog.info("Initiate auto update")
+            elapsed: float = time.time() - discovery.update_last_attempt if discovery.update_last_attempt is not None else -1
+            if elapsed == -1 or elapsed > UPDATE_INTERVAL:
+                dlog.info(
+                    "Initiate auto update (last:%s, elapsed:%s, max:%s)",
+                    discovery.update_last_attempt,
+                    elapsed,
+                    UPDATE_INTERVAL,
+                )
                 self.publisher.local_message(discovery, "install")
             else:
                 dlog.info("Skipping auto update")
