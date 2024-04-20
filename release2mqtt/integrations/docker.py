@@ -127,7 +127,7 @@ class DockerProvider(ReleaseProvider):
                 image_ref = c.image.tags[0]
                 image_name = image_ref.split(":")[0]
             except Exception as e:
-                logger.warn("No tags found (%s)", e)
+                logger.warn("No tags found (%s) : %s", c.image, e)
 
             try:
                 local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
@@ -301,4 +301,10 @@ class DockerProvider(ReleaseProvider):
         return {
             "docker_image_ref": discovery.custom.get("image_ref"),
             "last_update_attempt": safe_json_dt(discovery.update_last_attempt),
+            "can_pull": discovery.custom.get("can_pull"),
+            "can_build": discovery.custom.get("can_build"),
+            "can_restart": discovery.custom.get("can_restart"),
+            "git_repo_path": discovery.custom.get("git_repo_path"),
+            "compose_path": discovery.custom.get("compose_path"),
+            "platform": discovery.custom.get("platform"),
         }
