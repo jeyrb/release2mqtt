@@ -127,7 +127,7 @@ class DockerProvider(ReleaseProvider):
                 image_ref = c.image.tags[0]
                 image_name = image_ref.split(":")[0]
             except Exception as e:
-                logger.warn("No tags found (%s) : %s", c.image, e)
+                logger.warn("No tags found (%s) : %s", image_ref, e)
 
             try:
                 local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
