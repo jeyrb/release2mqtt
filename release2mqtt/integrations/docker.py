@@ -49,7 +49,7 @@ class DockerProvider(ReleaseProvider):
 
         image_ref: str | None = discovery.custom.get("image_ref")
         platform: str | None = discovery.custom.get("platform")
-        if discovery.custom.get("can_pull"):
+        if discovery.custom.get("can_pull") and image_ref:
             logger.info("Pulling", image_ref=image_ref, platform=platform)
             image: Image = typing.cast(Image, self.client.images.pull(image_ref, platform=platform, all_tags=False))
             if image:
@@ -215,6 +215,7 @@ class DockerProvider(ReleaseProvider):
             can_pull: bool = (
                 self.cfg.allow_pull
                 and image_ref is not None
+                and image_ref != ""
                 and (local_version != NO_KNOWN_IMAGE or latest_version != NO_KNOWN_IMAGE)
             )
             can_build: bool = self.cfg.allow_build and custom.get("git_repo_path") is not None
