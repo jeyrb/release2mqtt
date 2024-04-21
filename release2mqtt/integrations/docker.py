@@ -284,6 +284,7 @@ class DockerProvider(ReleaseProvider):
                 logger.warn("Unknown command")
             else:
                 if discovery.can_update:
+                    rediscovery: Discovery | None = None
                     logger.info("Starting update ...")
                     on_update_start(discovery)
                     if self.update(discovery):
@@ -293,7 +294,7 @@ class DockerProvider(ReleaseProvider):
                         logger.info("Rescanned %s: %s", updated, rediscovery)
                     else:
                         logger.info("Rescan with no result")
-                    on_update_end(discovery)
+                    on_update_end(rediscovery or discovery)
                 else:
                     logger.warning("Update not supported for this container")
         except Exception as e:
