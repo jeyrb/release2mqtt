@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import docker  # type: ignore[import-not-found]
+import docker.errors  # type: ignore[import-not-found]
 import structlog
 from docker.models.containers import Container  # type: ignore[import-not-found]
 from docker.models.images import Image  # type: ignore[import-not-found]
@@ -103,10 +104,15 @@ class DockerProvider(ReleaseProvider):
 
     def rescan(self, discovery: Discovery) -> Discovery | None:
         logger = self.log.bind(container=discovery.name, action="rescan")
-        c: Container = typing.cast(Container, self.client.containers.get(discovery.name))
-        if c:
-            return self.analyze(c, discovery.session, original_discovery=discovery)
-        logger.warn("Unable to find container for rescan")
+        try:
+            c: Container = typing.cast(Container, self.client.containers.get(discovery.name))
+            if c:
+                return self.analyze(c, discovery.session, original_discovery=discovery)
+            logger.warn("Unable to find container for rescan")
+        except docker.errors.NotFound:
+            logger.warn("Container not found in Docker")
+        except docker.errors.APIError as e:
+            logger.warn("Docker API error retrieving container: %s", e)
         return None
 
     def analyze(self, c: Container, session: str, original_discovery: Discovery | None = None) -> Discovery | None:
@@ -282,8 +288,9 @@ class DockerProvider(ReleaseProvider):
                     on_update_start(discovery)
                     if self.update(discovery):
                         logger.info("Rescanning ...")
-                        updated = self.rescan(discovery) is not None
-                        logger.info("Rescanned %s", updated)
+                        rediscovery = self.rescan(discovery)
+                        updated = rediscovery is not None
+                        logger.info("Rescanned %s: %s", updated, rediscovery)
                     else:
                         logger.info("Rescan with no result")
                     on_update_end(discovery)

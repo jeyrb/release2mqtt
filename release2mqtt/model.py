@@ -45,7 +45,7 @@ class Discovery:
 
     def __repr__(self) -> str:
         """Build a custom string representation"""
-        return f"Discovery('{self.name}','{self.source_type}')"
+        return f"Discovery('{self.name}','{self.source_type}',current={self.current_version},latest={self.latest_version})"
 
 
 class ReleaseProvider:

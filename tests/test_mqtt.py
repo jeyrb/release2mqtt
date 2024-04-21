@@ -28,17 +28,14 @@ async def test_publish(mock_mqtt_client: Mock) -> None:
 
 
 @pytest.mark.asyncio()
-async def test_handler(
-    mock_mqtt_client: Mock,
-    event_loop: asyncio.AbstractEventLoop,
-) -> None:
+async def test_handler(mock_mqtt_client: Mock) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
     node_config = NodeConfig()
     node_config.name = "testing"
     with patch("release2mqtt.mqtt.mqtt.Client", new=mock_mqtt_client):
         uut = MqttClient(config, node_config, hass_config)
-        uut.start(event_loop=event_loop)
+        uut.start(event_loop=asyncio.get_running_loop())
 
         provider = Mock(spec=ReleaseProvider)
         provider.source_type = "unit_test"
@@ -59,16 +56,14 @@ async def test_handler(
         provider.command.assert_called_with("qux", "install", mock.ANY, mock.ANY)
 
 
-async def test_execute_command_remote(
-    mock_mqtt_client: Mock, mock_provider: ReleaseProvider, event_loop: asyncio.AbstractEventLoop
-) -> None:
+async def test_execute_command_remote(mock_mqtt_client: Mock, mock_provider: ReleaseProvider) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
     node_config = NodeConfig()
 
     with patch.object(paho.mqtt.client.Client, "__new__", lambda *_args, **_kwargs: mock_mqtt_client):
         uut = MqttClient(config, node_config, hass_config)
-        uut.start(event_loop=event_loop)
+        uut.start(event_loop=asyncio.get_running_loop())
 
         uut.subscribe_hass_command(mock_provider)
         dummy_callable = lambda: None  # noqa: E731
@@ -95,9 +90,7 @@ async def test_execute_command_remote(
 
 
 @pytest.mark.asyncio()
-async def test_execute_command_local(
-    mock_mqtt_client: Mock, mock_provider: ReleaseProvider, event_loop: asyncio.AbstractEventLoop
-) -> None:
+async def test_execute_command_local(mock_mqtt_client: Mock, mock_provider: ReleaseProvider) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
     node_config = NodeConfig()
@@ -105,7 +98,7 @@ async def test_execute_command_local(
     with patch.object(paho.mqtt.client.Client, "__new__", lambda *_args, **_kwargs: mock_mqtt_client):
         uut = MqttClient(config, node_config, hass_config)
 
-        uut.start(event_loop=event_loop)
+        uut.start(event_loop=asyncio.get_running_loop())
 
         uut.subscribe_hass_command(mock_provider)
 
