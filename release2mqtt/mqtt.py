@@ -99,7 +99,7 @@ class MqttClient:
         logger.info("Starting clean cycle")
         cleaner = mqtt.Client(
             callback_api_version=CallbackAPIVersion.VERSION1,
-            client_id="release2mqtt_clean_%s" % self.node_cfg.name,
+            client_id=f"release2mqtt_clean_{self.node_cfg.name}",
             clean_session=True,
         )
         cleaner.username_pw_set(self.cfg.user, password=self.cfg.password)
@@ -136,7 +136,7 @@ class MqttClient:
         cleaner.on_message = cleanup
         options = paho.mqtt.subscribeoptions.SubscribeOptions(noLocal=True)
         cleaner.subscribe(
-            "%s/update/#" % self.hass_cfg.discovery.prefix,
+            f"{self.hass_cfg.discovery.prefix}/update/#",
             options=options,
         )
         cleaner.subscribe(

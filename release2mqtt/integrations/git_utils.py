@@ -9,7 +9,7 @@ log = structlog.get_logger()
 
 def git_trust(repo_path: Path) -> bool:
     try:
-        subprocess.run("git config --global --add safe.directory %s" % repo_path, check=True, shell=True, cwd=repo_path)
+        subprocess.run(f"git config --global --add safe.directory {repo_path}", check=True, shell=True, cwd=repo_path)
         return True
     except Exception as e:
         log.warn("GIT Unable to trust repo at %s: %s", repo_path, e)
