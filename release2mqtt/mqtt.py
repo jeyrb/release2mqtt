@@ -44,7 +44,7 @@ class MqttClient:
             self.event_loop = event_loop or asyncio.get_event_loop()
             self.client = mqtt.Client(
                 callback_api_version=CallbackAPIVersion.VERSION2,
-                client_id="release2mqtt_%s" % self.node_cfg.name,
+                client_id=f"release2mqtt_{self.node_cfg.name}",
                 clean_session=True,
             )
             self.client.username_pw_set(self.cfg.user, password=self.cfg.password)
@@ -236,6 +236,7 @@ class MqttClient:
         return f"{self.cfg.topic_root}/{self.node_cfg.name}/{provider.source_type}"
 
     def publish_hass_state(self, discovery: Discovery, in_progress: bool = False) -> None:
+        self.log.debug("HASS State update, in progress: %s, discovery: %s", in_progress, discovery)
         self.publish(
             self.state_topic(discovery),
             hass_format_state(

@@ -107,7 +107,10 @@ class DockerProvider(ReleaseProvider):
         try:
             c: Container = typing.cast(Container, self.client.containers.get(discovery.name))
             if c:
-                return self.analyze(c, discovery.session, original_discovery=discovery)
+                rediscovery = self.analyze(c, discovery.session, original_discovery=discovery)
+                if rediscovery:
+                    self.discoveries[rediscovery.name] = rediscovery
+                    return rediscovery
             logger.warn("Unable to find container for rescan")
         except docker.errors.NotFound:
             logger.warn("Container not found in Docker")
