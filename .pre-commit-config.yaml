@@ -1,11 +1,11 @@
 repos:
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.2
+    rev: v3.17.0
     hooks:
       - id: pyupgrade
         args: [--py311-plus]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.7
+    rev: v0.6.2
     hooks:
      # Run the linter.
       - id: ruff
@@ -13,7 +13,7 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.3.0
     hooks:
       - id: codespell
         args:
@@ -28,11 +28,12 @@ repos:
         stages: [manual]
       - id: check-json
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
+    rev: v1.11.2
     hooks:
       - id: mypy
         args:
           - --pretty
+          - --namespace-packages
           - --explicit-package-bases
           - --show-error-codes
           - --show-error-context

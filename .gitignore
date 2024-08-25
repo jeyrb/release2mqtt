@@ -6,7 +6,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 cov.xml
-
+htmlcov/
+.ruff_cache/
+lcov.info
 .vscode/
 
 # C extensions

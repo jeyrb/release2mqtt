@@ -1,4 +1,0 @@
-mkdocstrings
-mkdocstrings[python]>=0.18
-pymdown-extensions
-mkdocs-material

@@ -11,6 +11,6 @@ RUN pip install --trusted-host pypi.python.org -v -r /requirements.txt
 
 WORKDIR /release2mqtt
 
-ADD . /release2mqtt
+ADD src /release2mqtt
 
 CMD ["python", "-m", "release2mqtt.app"]
