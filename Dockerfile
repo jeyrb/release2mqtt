@@ -7,12 +7,12 @@ RUN apt-get -y upgrade
 RUN apt-get -y install git
 RUN apt-get -y install docker-compose
 
-ADD README.md .
-ADD pyproject.toml .
-ADD uv.lock .
-ADD src /release2mqtt
+ADD README.md /app/README.md
+ADD common_packages.yaml /app
+ADD pyproject.toml /app/pyproject.toml
+ADD uv.lock /app/uv.lock
+ADD src /app
+WORKDIR /app
 RUN uv sync --frozen
 
-WORKDIR /release2mqtt
-
-CMD ["uv", "run", "release2mqtt"]
+CMD ["uv", "run", "run.py"]
