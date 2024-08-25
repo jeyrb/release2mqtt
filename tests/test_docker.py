@@ -8,7 +8,7 @@ import release2mqtt.integrations.docker as mut
 from release2mqtt.model import Discovery
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_scanner(mock_docker_client: DockerClient) -> None:
     with patch("docker.from_env", return_value=mock_docker_client):
         uut = mut.DockerProvider(mut.DockerConfig(), mut.UpdateInfoConfig())

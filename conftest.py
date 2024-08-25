@@ -9,7 +9,7 @@ from docker.models.images import Image, RegistryData  # type:ignore[import-not-f
 from release2mqtt.model import Discovery, ReleaseProvider  # type:ignore[import-not-found]
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_provider() -> ReleaseProvider:
     provider = Mock(spec=ReleaseProvider)
     provider.source_type = "unit_test"
@@ -21,12 +21,12 @@ def mock_provider() -> ReleaseProvider:
     return provider
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_mqtt_client() -> paho.mqtt.client.Client:
     return MagicMock(spec=paho.mqtt.client.Client, name="MQTT Client Fixture")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_docker_client() -> DockerClient:
     client = Mock(spec=DockerClient)
     coll = Mock(spec=ContainerCollection)

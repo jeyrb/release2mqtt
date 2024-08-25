@@ -13,7 +13,7 @@ from release2mqtt.model import Discovery, ReleaseProvider
 from release2mqtt.mqtt import MqttClient
 
 
-async def test_publish(mock_mqtt_client: Mock) -> None:
+def test_publish(mock_mqtt_client: Mock) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
     node_config = NodeConfig()
@@ -27,7 +27,7 @@ async def test_publish(mock_mqtt_client: Mock) -> None:
         mock_mqtt_client.publish.assert_called_with("test.topic.123", payload='{"foo": "a8", "bar": false}', qos=0, retain=True)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_handler(mock_mqtt_client: Mock) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
@@ -50,7 +50,7 @@ async def test_handler(mock_mqtt_client: Mock) -> None:
         uut.handle_message(mock_message)
 
         cutoff = time.time() + 10
-        while time.time() <= cutoff and not provider.command.called:
+        while time.time() <= cutoff and not provider.command.called:  # noqa: ASYNC110
             await asyncio.sleep(0.5)
 
         provider.command.assert_called_with("qux", "install", mock.ANY, mock.ANY)
@@ -89,7 +89,7 @@ async def test_execute_command_remote(mock_mqtt_client: Mock, mock_provider: Rel
         )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_execute_command_local(mock_mqtt_client: Mock, mock_provider: ReleaseProvider) -> None:
     config = MqttConfig()
     hass_config = HomeAssistantConfig()
