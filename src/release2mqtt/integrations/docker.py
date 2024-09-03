@@ -77,7 +77,7 @@ class DockerProvider(ReleaseProvider):
     def build(self, discovery: Discovery, compose_path: str) -> bool:
         logger = self.log.bind(container=discovery.name, action="build")
         logger.info("Building")
-        proc = subprocess.run("docker-compose build", shell=True, check=False, cwd=compose_path)
+        proc = subprocess.run("docker compose build", shell=True, check=False, cwd=compose_path)
         if proc.returncode == 0:
             logger.info("Build via compose successful")
             return True
@@ -92,7 +92,7 @@ class DockerProvider(ReleaseProvider):
         compose_path = discovery.custom.get("compose_path")
         if compose_path:
             logger.info("Restarting")
-            proc = subprocess.run("docker-compose up --detach", check=False, shell=True, cwd=compose_path)
+            proc = subprocess.run("docker compose up --detach", check=False, shell=True, cwd=compose_path)
             if proc.returncode == 0:
                 logger.info("Restart via compose successful")
                 return True
