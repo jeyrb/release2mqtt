@@ -28,7 +28,7 @@ def test_build(mock_docker_client: DockerClient, fake_process: FakeProcess) -> N
     with patch("docker.from_env", return_value=mock_docker_client):
         uut = mut.DockerProvider(mut.DockerConfig(), mut.UpdateInfoConfig())
         d = Discovery(uut, "build-test-dummy", session="test-123")
-        fake_process.register("docker-compose build", returncode=0)
+        fake_process.register("docker compose build", returncode=0)
         assert uut.build(d, "build-test-dc-path")
-        fake_process.register("docker-compose build", returncode=33)
+        fake_process.register("docker compose build", returncode=33)
         assert not uut.build(d, "build-test-dc-path")

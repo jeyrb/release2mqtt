@@ -77,12 +77,23 @@ class DockerProvider(ReleaseProvider):
     def build(self, discovery: Discovery, compose_path: str) -> bool:
         logger = self.log.bind(container=discovery.name, action="build")
         logger.info("Building")
-        proc = subprocess.run("docker compose build", shell=True, check=False, cwd=compose_path)
+        if compose_path:
+            return self.execute_compose("build", "", compose_path, logger)
+        return False
+
+    def execute_compose(self, command: str, args: str, cwd: str, logger: structlog.BoundLogger) -> bool:
+        logger.info(f"Executing compose {command} {args}")
+        cmd: str = "docker-compose" if self.cfg.compose_version == "v1" else "docker compose"
+        cmd = cmd + " " + command
+        if args:
+            cmd = cmd + " " + args
+
+        proc = subprocess.run(cmd, check=False, shell=True, cwd=cwd)
         if proc.returncode == 0:
-            logger.info("Build via compose successful")
+            logger.info(f"{command} via compose successful")
             return True
         logger.warn(
-            "Build failed: %s",
+            f"{command} failed: %s",
             proc.returncode,
         )
         return False
@@ -91,15 +102,7 @@ class DockerProvider(ReleaseProvider):
         logger = self.log.bind(container=discovery.name, action="restart")
         compose_path = discovery.custom.get("compose_path")
         if compose_path:
-            logger.info("Restarting")
-            proc = subprocess.run("docker compose up --detach", check=False, shell=True, cwd=compose_path)
-            if proc.returncode == 0:
-                logger.info("Restart via compose successful")
-                return True
-            logger.warn(
-                "Restart failed: %s",
-                proc.returncode,
-            )
+            return self.execute_compose("up", "--detach", compose_path, logger)
         return False
 
     def rescan(self, discovery: Discovery) -> Discovery | None:
