@@ -1,6 +1,6 @@
 FROM python:3.12-slim-bookworm
 
-COPY --from=ghcr.io/astral-sh/uv:0.3.3 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.4.28 /uv /bin/uv
 
 RUN apt-get -y update
 RUN apt-get -y upgrade

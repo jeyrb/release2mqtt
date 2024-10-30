@@ -31,7 +31,7 @@ class DockerProvider(ReleaseProvider):
     def __init__(self, cfg: DockerConfig, common_pkg_cfg: UpdateInfoConfig) -> None:
         self.client: docker.DockerClient = docker.from_env()
         self.cfg: DockerConfig = cfg
-        self.common_pkgs: dict[str, PackageUpdateInfo] = common_pkg_cfg.common_packages
+        self.common_pkgs: dict[str, PackageUpdateInfo] = common_pkg_cfg.common_packages if common_pkg_cfg else {}
         self.source_type: str = "docker"
         self.discoveries: dict[str, Discovery] = {}
         self.log: Any = structlog.get_logger().bind(integration="docker")
@@ -132,14 +132,18 @@ class DockerProvider(ReleaseProvider):
         if c.name is None:
             logger.warn("No container name found, discovery rejected")
             return None
-        if c.image is None:
+        image = c.image
+        if image is not None and image.tags and len(image.tags)>0:
+            image_ref = image.tags[0]
+        else:
+            image_ref = c.attrs.get('Config',{}).get('Image')
+        if image_ref is None:
             logger.warn("No image or image attributes found")
         else:
             try:
-                image_ref = c.image.tags[0]
                 image_name = image_ref.split(":")[0]
             except Exception as e:
-                logger.warn("No tags found (%s) : %s", image_ref, e)
+                logger.warn("No tags found (%s) : %s", image, e)
 
             try:
                 local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
