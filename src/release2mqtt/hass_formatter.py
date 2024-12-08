@@ -27,7 +27,7 @@ def hass_format_config(
     return config
 
 
-def hass_format_state(discovery: Discovery, node_name: str, session: str, in_progress: bool = False) -> dict[str, Any]:
+def hass_format_state(discovery: Discovery, node_name: str, session: str, in_progress: bool = False) -> dict[str, Any]:  # noqa: ARG001
     title: str = (
         discovery.title_template.format(name=discovery.name, node=node_name) if discovery.title_template else discovery.name
     )
@@ -35,9 +35,6 @@ def hass_format_state(discovery: Discovery, node_name: str, session: str, in_pro
         "installed_version": discovery.current_version,
         "latest_version": discovery.latest_version,
         "title": title,
-        "source_session": session,
-        "in_progress": in_progress,
-        "auto_update": discovery.update_policy == "Auto",
     }
     if discovery.release_summary:
         state["release_summary"] = discovery.release_summary
