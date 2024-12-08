@@ -1,6 +1,20 @@
 from typing import Any
 
+import structlog
+
 from release2mqtt.model import Discovery
+
+log = structlog.get_logger()
+HASS_UPDATE_SCHEMA = [
+    "installed_version",
+    "latest_version",
+    "title",
+    "release_summary",
+    "release_url",
+    "entity_picture",
+    "in_progress",
+    "update_percentage",
+]
 
 
 def hass_format_config(
@@ -35,12 +49,17 @@ def hass_format_state(discovery: Discovery, node_name: str, session: str, in_pro
         "installed_version": discovery.current_version,
         "latest_version": discovery.latest_version,
         "title": title,
+        "in_progress": in_progress,
     }
     if discovery.release_summary:
         state["release_summary"] = discovery.release_summary
     if discovery.release_url:
         state["release_url"] = discovery.release_url
-    # custom_state = discovery.provider.hass_state_format(discovery)
-    # if custom_state:
-    #    state.update(custom_state)
+    custom_state = discovery.provider.hass_state_format(discovery)
+    if custom_state:
+        state.update(custom_state)
+    invalid_keys = [k for k in state if k not in HASS_UPDATE_SCHEMA]
+    if invalid_keys:
+        log.warning(f"Invalid keys in state: {invalid_keys}")
+        state = {k: v for k, v in state.items() if k in HASS_UPDATE_SCHEMA}
     return state
