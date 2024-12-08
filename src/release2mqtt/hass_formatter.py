@@ -35,8 +35,6 @@ def hass_format_state(discovery: Discovery, node_name: str, session: str, in_pro
         "installed_version": discovery.current_version,
         "latest_version": discovery.latest_version,
         "title": title,
-        "release_summary": discovery.release_summary,
-        "release_url": discovery.release_url,
         "source_session": session,
         "in_progress": in_progress,
         "auto_update": discovery.update_policy == "Auto",
