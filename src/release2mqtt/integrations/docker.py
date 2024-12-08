@@ -133,10 +133,10 @@ class DockerProvider(ReleaseProvider):
             logger.warn("No container name found, discovery rejected")
             return None
         image = c.image
-        if image is not None and image.tags and len(image.tags)>0:
+        if image is not None and image.tags and len(image.tags) > 0:
             image_ref = image.tags[0]
         else:
-            image_ref = c.attrs.get('Config',{}).get('Image')
+            image_ref = c.attrs.get("Config", {}).get("Image")
         if image_ref is None:
             logger.warn("No image or image attributes found")
         else:
@@ -316,14 +316,14 @@ class DockerProvider(ReleaseProvider):
     def resolve(self, discovery_name: str) -> Discovery | None:
         return self.discoveries.get(discovery_name)
 
-    def hass_state_format(self, discovery: Discovery) -> dict:
+    def hass_state_format(self, discovery: Discovery) -> dict:  # noqa: ARG002
         return {
-            "docker_image_ref": discovery.custom.get("image_ref"),
-            "last_update_attempt": safe_json_dt(discovery.update_last_attempt),
-            "can_pull": discovery.custom.get("can_pull"),
-            "can_build": discovery.custom.get("can_build"),
-            "can_restart": discovery.custom.get("can_restart"),
-            "git_repo_path": discovery.custom.get("git_repo_path"),
-            "compose_path": discovery.custom.get("compose_path"),
-            "platform": discovery.custom.get("platform"),
+            # "docker_image_ref": discovery.custom.get("image_ref"),
+            # "last_update_attempt": safe_json_dt(discovery.update_last_attempt),
+            # "can_pull": discovery.custom.get("can_pull"),
+            # "can_build": discovery.custom.get("can_build"),
+            # "can_restart": discovery.custom.get("can_restart"),
+            # "git_repo_path": discovery.custom.get("git_repo_path"),
+            # "compose_path": discovery.custom.get("compose_path"),
+            # "platform": discovery.custom.get("platform"),
         }
