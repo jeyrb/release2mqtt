@@ -5,8 +5,8 @@ description = "System update notification and execution over MQTT"
 authors = [
     { name = "jey burrows", email = "jrb@jeymail.net" }
 ]
-version = "1.3.2"
-requires-python = ">=3.12"
+version = "1.3.3"
+requires-python = ">=3.13"
 packages = [
   { include = "src" },
 ]
@@ -23,11 +23,12 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.12"
+    "Programming Language :: Python :: 3.13"
 ]
 
 [tool.uv]
 compile-bytecode = true
+managed = true
 dev-dependencies = [
     "ruff>=0.3.7",
     "pre-commit>=3.7.0",
@@ -41,8 +42,19 @@ dev-dependencies = [
   "mkdocstrings",
   "mkdocstrings[python]>=0.18",
   "pymdown-extensions",
-  "mkdocs-material"
+  "mkdocs-material",
+  "taskipy>=1.13.0"
 ]
+
+[tool.taskipy.tasks]
+pyright_lint = "pyright ."
+ruff_format = "ruff format ."
+ruff_lint = "ruff check ."
+ruff_fix = "ruff check --fix ."
+test = "pytest tests -n auto --cov=app --cov-report=term --cov-report=xml"
+format = "task ruff_fix && task ruff_format"
+lint = "task ruff_lint && task pyright_lint"
+check = "task format && task lint && task test"
 
 [build-system]
 build-backend = "hatchling.build"

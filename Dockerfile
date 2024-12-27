@@ -1,6 +1,6 @@
 FROM python:3.13-slim-bookworm
 
-COPY --from=ghcr.io/astral-sh/uv:0.5.12 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 RUN apt-get -y update
 RUN apt-get -y upgrade
@@ -25,6 +25,6 @@ ADD pyproject.toml /app/pyproject.toml
 ADD uv.lock /app/uv.lock
 ADD src /app
 WORKDIR /app
-RUN uv sync --frozen
+RUN uv sync --frozen --all-extras
 
 CMD ["uv", "run", "run.py"]
