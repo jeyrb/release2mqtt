@@ -1,0 +1,6 @@
+venv
+.venv
+.mypy_cache
+.pytest_cache
+tests
+
