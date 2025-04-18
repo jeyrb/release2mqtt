@@ -75,14 +75,10 @@ async def test_execute_command_remote(mock_mqtt_client: Mock, mock_provider: Rel
         mock_mqtt_client.publish.assert_called_with(
             "rel2mqtt/UNKNOWN/unit_test/fooey",
             payload=json.dumps({
-                "state": "on",
                 "installed_version": "v2",
                 "latest_version": "v2",
                 "title": "Update for fooey on UNKNOWN",
-                "source_session": "test-mqtt-123",
                 "in_progress": True,
-                "auto_update": False,
-                "fixture": "test_exec",
             }),
             qos=0,
             retain=True,
@@ -109,14 +105,10 @@ async def test_execute_command_local(mock_mqtt_client: Mock, mock_provider: Rele
         mock_mqtt_client.publish.assert_called_with(
             "rel2mqtt/UNKNOWN/unit_test/fooey",
             payload=json.dumps({
-                "state": "on",
                 "installed_version": "v2",
                 "latest_version": "v2",
                 "title": "Update for fooey on UNKNOWN",
-                "source_session": "test-mqtt-123",
                 "in_progress": True,
-                "auto_update": False,
-                "fixture": "test_exec",
             }),
             qos=0,
             retain=True,
