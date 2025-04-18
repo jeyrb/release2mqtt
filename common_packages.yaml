@@ -38,8 +38,8 @@ common_packages:
   forejo:
     docker:
       image_name: codeberg.org/forgejo/forgejo
-      logo_url: https://codeberg.org/forgejo/forgejo/raw/branch/forgejo/assets/logo.svg
-      release_notes_url: https://forgejo.org/releases/
+    logo_url: https://codeberg.org/forgejo/forgejo/raw/branch/forgejo/assets/logo.svg
+    release_notes_url: https://forgejo.org/releases/
 
   portainer:
     docker:
