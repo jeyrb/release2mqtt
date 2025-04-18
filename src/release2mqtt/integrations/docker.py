@@ -10,12 +10,14 @@ import docker  # type: ignore[import-not-found]
 import docker.errors  # type: ignore[import-not-found]
 import structlog
 from docker.models.containers import Container  # type: ignore[import-not-found]
-from docker.models.images import Image  # type: ignore[import-not-found]
 
 from release2mqtt.config import DockerConfig, PackageUpdateInfo, UpdateInfoConfig
 from release2mqtt.model import Discovery, ReleaseProvider
 
 from .git_utils import git_check_update_available, git_pull, git_timestamp, git_trust
+
+if typing.TYPE_CHECKING:
+    from docker.models.images import Image, RegistryData
 
 # distinguish docker build from docker pull?
 
@@ -52,7 +54,7 @@ class DockerProvider(ReleaseProvider):
         platform: str | None = discovery.custom.get("platform")
         if discovery.custom.get("can_pull") and image_ref:
             logger.info("Pulling", image_ref=image_ref, platform=platform)
-            image: Image = typing.cast(Image, self.client.images.pull(image_ref, platform=platform, all_tags=False))
+            image: Image = typing.cast("Image", self.client.images.pull(image_ref, platform=platform, all_tags=False))
             if image:
                 logger.info("Pulled", image_id=image.id, image_ref=image_ref, platform=platform)
             else:
@@ -108,7 +110,7 @@ class DockerProvider(ReleaseProvider):
     def rescan(self, discovery: Discovery) -> Discovery | None:
         logger = self.log.bind(container=discovery.name, action="rescan")
         try:
-            c: Container = typing.cast(Container, self.client.containers.get(discovery.name))
+            c: Container = typing.cast("Container", self.client.containers.get(discovery.name))
             if c:
                 rediscovery = self.analyze(c, discovery.session, original_discovery=discovery)
                 if rediscovery:
@@ -132,7 +134,7 @@ class DockerProvider(ReleaseProvider):
         if c.name is None:
             logger.warn("No container name found, discovery rejected")
             return None
-        image = c.image
+        image: Image | None = cast("Image | None", c.image)
         if image is not None and image.tags and len(image.tags) > 0:
             image_ref = image.tags[0]
         else:
@@ -144,21 +146,25 @@ class DockerProvider(ReleaseProvider):
                 image_name = image_ref.split(":")[0]
             except Exception as e:
                 logger.warn("No tags found (%s) : %s", image, e)
-
-            try:
-                local_versions = [i.split("@")[1][7:19] for i in c.image.attrs["RepoDigests"]]
-            except Exception as e:
-                logger.warn("Cannot determine local version: %s", e)
-                logger.warn("RepoDigests=%s", c.image.attrs.get("RepoDigests"))
+            if image is not None and image.attrs is not None:
+                try:
+                    local_versions = [i.split("@")[1][7:19] for i in image.attrs["RepoDigests"]]
+                except Exception as e:
+                    logger.warn("Cannot determine local version: %s", e)
+                    logger.warn("RepoDigests=%s", image.attrs.get("RepoDigests"))
 
         relnotes_url: str | None = None
         picture_url: str | None = self.cfg.default_entity_picture_url
         platform: str = "Unknown"
 
         for pkg in self.common_pkgs.values():
+            matched = False
             if pkg.docker is not None and pkg.docker.image_name is not None and pkg.docker.image_name == image_name:
                 picture_url = pkg.logo_url
                 relnotes_url = pkg.release_notes_url
+                logger.debug("Found common package", pkg=pkg.docker.image_name, logo_url=picture_url, relnotes_url=relnotes_url)
+            if not matched:
+                logger.debug("No common package found", image_name)
 
         def env_override(env_var: str, default: Any) -> Any | None:
             return default if c_env.get(env_var) is None else c_env.get(env_var)
@@ -168,27 +174,28 @@ class DockerProvider(ReleaseProvider):
             c_env = dict(env.split("=", maxsplit=1) for env in env_str if "==" not in env)
             picture_url = env_override("REL2MQTT_PICTURE", picture_url)
             relnotes_url = env_override("REL2MQTT_RELNOTES", relnotes_url)
-            if c.image is not None and c.image.attrs is not None:
+            if image is not None and image.attrs is not None:
                 platform = "/".join(
                     filter(
                         None,
                         [
-                            c.image.attrs["Os"],
-                            c.image.attrs["Architecture"],
-                            c.image.attrs.get("Variant"),
+                            image.attrs["Os"],
+                            image.attrs["Architecture"],
+                            image.attrs.get("Variant"),
                         ],
                     ),
                 )
 
-            reg_data = None
-            latest_version = local_version = NO_KNOWN_IMAGE
+            reg_data: RegistryData | None = None
+            latest_version: str | None = NO_KNOWN_IMAGE
+            local_version: str | None = NO_KNOWN_IMAGE
 
             if image_ref and local_versions:
                 retries_left = 3
                 while reg_data is None and retries_left > 0:
                     try:
                         reg_data = self.client.images.get_registry_data(image_ref)
-                        latest_version = reg_data and reg_data.short_id[7:]
+                        latest_version = reg_data.short_id[7:] if reg_data else None
                     except Exception as e:
                         retries_left -= 1
                         if retries_left == 0:
@@ -221,8 +228,8 @@ class DockerProvider(ReleaseProvider):
                 update_policy = "Passive"
 
             if custom.get("git_repo_path") and custom.get("compose_path"):
-                full_repo_path: Path = Path(cast(str, custom.get("compose_path"))).joinpath(
-                    cast(str, custom.get("git_repo_path"))
+                full_repo_path: Path = Path(cast("str", custom.get("compose_path"))).joinpath(
+                    cast("str", custom.get("git_repo_path"))
                 )
 
                 git_trust(full_repo_path)
@@ -274,7 +281,7 @@ class DockerProvider(ReleaseProvider):
         containers = results = 0
         for c in self.client.containers.list():
             containers = containers + 1
-            result = self.analyze(cast(Container, c), session)
+            result = self.analyze(cast("Container", c), session)
             if result:
                 self.discoveries[result.name] = result
                 results = results + 1

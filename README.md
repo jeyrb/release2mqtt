@@ -43,6 +43,14 @@ Individual docker containers can have customized entity pictures or release note
 The images will show up in the *Update* section of *Settings* menu in HomeAssistant,
 as will the release notes link.
 
+#### Icon Sources
+
+- [Homarr Dashboard Icons](https://github.com/homarr-labs/dashboard-icons)
+- [Self Hosted Icons](https://github.com/selfhst/icons)
+- [Simple Icons](https://github.com/simple-icons/simple-icons)
+- [Tabler Icons](https://tabler.io/icons)
+- [Papirus Icons](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
+
 ### Automated updates
 
 If Docker containers should be immediately updated, without any confirmation

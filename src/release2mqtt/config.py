@@ -87,7 +87,7 @@ def load_package_info(pkginfo_file_path: Path) -> UpdateInfoConfig:
         log.warn("No common package update info found at %s", pkginfo_file_path)
         cfg = OmegaConf.structured(UpdateInfoConfig)
     OmegaConf.set_readonly(cfg, True)
-    return typing.cast(UpdateInfoConfig, cfg)
+    return typing.cast("UpdateInfoConfig", cfg)
 
 
 def load_app_config(conf_file_path: Path) -> Config:
@@ -105,4 +105,4 @@ def load_app_config(conf_file_path: Path) -> Config:
         cfg.node.name = os.uname().nodename
 
     OmegaConf.set_readonly(cfg, True)
-    return typing.cast(Config, cfg)
+    return typing.cast("Config", cfg)
