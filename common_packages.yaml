@@ -35,8 +35,38 @@ common_packages:
     logo_url: https://raw.githubusercontent.com/go-gitea/gitea/47b878858ada27fc4c74eeadcc1e467d2da90e04/assets/logo.svg
     release_notes_url: https://github.com/go-gitea/gitea/releases
 
+  forejo:
+    docker:
+      image_name: codeberg.org/forgejo/forgejo
+      logo_url: https://codeberg.org/forgejo/forgejo/raw/branch/forgejo/assets/logo.svg
+      release_notes_url: https://forgejo.org/releases/
+
   portainer:
     docker:
       image_name: portainer/portainer-ce
     logo_url: https://raw.githubusercontent.com/portainer/portainer/develop/build/docker-extension/portainer.svg
     release_notes_url: https://github.com/portainer/portainer/releases
+
+  graylog:
+    docker:
+      image_name: graylog/graylog
+    logo_url: https://raw.githubusercontent.com/Graylog2/documentation/6de01bbddba6bb688c8b3de4f353629f24702fce/images/logo.svg
+    release_notes_url: https://graylog.org/releases/
+
+  influxdb:
+    docker:
+      image_name: influxdb
+    logo_url: https://raw.githubusercontent.com/gilbarbara/logos/refs/heads/main/logos/influxdb.svg
+    release_notes_url: https://github.com/influxdata/influxdb/releases
+
+  immich-server:
+    docker:
+      image_name: ghcr.io/immich-app/immich-server
+    logo_url: https://raw.githubusercontent.com/immich-app/immich/6474a78b8be31cf6a3c2fabf2f3177ffd40624e1/design/immich-logo.svg
+    release_notes_url: https://github.com/immich-app/immich/releases
+  
+  immich-machine-learning:
+    docker:
+      image_name: ghcr.io/immich-app/immich-machine-learnin
+    logo_url: https://raw.githubusercontent.com/immich-app/immich/6474a78b8be31cf6a3c2fabf2f3177ffd40624e1/design/immich-logo.svg
+    release_notes_url: https://github.com/immich-app/immich/releases
