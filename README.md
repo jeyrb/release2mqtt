@@ -41,7 +41,7 @@ Individual docker containers can have customized entity pictures or release note
 ```
 
 The images will show up in the *Update* section of *Settings* menu in HomeAssistant,
-as will the release notes link.
+as will the release notes link. SVG icons should be used.
 
 #### Icon Sources
 
@@ -50,6 +50,7 @@ as will the release notes link.
 - [Simple Icons](https://github.com/simple-icons/simple-icons)
 - [Tabler Icons](https://tabler.io/icons)
 - [Papirus Icons](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
+- [Homelab SVG Assets](https://github.com/loganmarchione/homelab-svg-assets)
 
 ### Automated updates
 
